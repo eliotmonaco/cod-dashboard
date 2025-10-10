@@ -1,0 +1,17 @@
+/*-- scss:defaults --*/
+
+$syn-lightblue: #d2dffc;
+
+$bslib-sidebar-bg: $syn-lightblue !default;
+
+
+
+/*-- scss:rules --*/
+
+.irs--shiny.irs-with-grid, .shiny-input-select {
+  margin: 0 10px;
+}
+
+.form-group.shiny-input-container > .control-label {
+  font-weight: bold;
+}

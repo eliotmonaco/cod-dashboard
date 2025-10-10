@@ -1,0 +1,8 @@
+.Rproj.user/
+data/
+*_files/
+
+*.Rproj
+*.html
+
+

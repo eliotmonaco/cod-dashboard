@@ -1,0 +1,119 @@
+---
+title: "Cause of Death Explorer"
+format:
+  dashboard:
+    theme:
+      - default
+      - custom.scss
+server: shiny
+---
+
+```{r message=FALSE}
+#| context: setup
+
+library(tidyverse)
+library(ggiraph)
+
+source("scripts/fn.R")
+
+cod <- readRDS("data/cod_rankable.rds")
+vrd <- readRDS("data/vr_deaths_2014_2023.rds")
+```
+
+```{r}
+maxage <- max(vrd$age, na.rm = TRUE)
+
+ngroups <- ceiling(maxage / 5)
+
+agegroups <- list()
+
+age <- 0
+
+for (i in 1:ngroups) {
+  agegroups[[i]] <- paste(age:(age + 4), collapse = ";")
+  names(agegroups)[i] <- paste(age, "to", age + 4)
+  age <- age + 5
+}
+
+agegroups <- c(
+  list("All ages" = paste(0:maxage, collapse = ";")),
+  agegroups
+)
+```
+
+# {.sidebar}
+
+```{r}
+sliderInput(
+  inputId = "years",
+  label = "Years",
+  min = min(vrd$yod, na.rm = TRUE),
+  max = max(vrd$yod, na.rm = TRUE),
+  value = c(
+    min(vrd$yod, na.rm = TRUE),
+    max(vrd$yod, na.rm = TRUE)
+  ),
+  step = 1,
+  sep = ""
+)
+
+selectInput(
+  inputId = "age",
+  label = "Ages",
+  choices = agegroups
+)
+
+sliderInput(
+  inputId = "nranks",
+  label = "Number of ranks",
+  min = 1,
+  max = length(cod),
+  value = 10,
+  step = 1
+)
+```
+
+# Plot
+
+```{r}
+plotOutput("plot")
+```
+
+```{r}
+#| context: server
+
+vrd2 <- reactive({
+  req(input$age, input$years, input$nranks)
+  
+  yrs <- input$years
+
+  ages <- unlist(strsplit(input$age, ";"))
+  
+  nranks <- input$nranks
+
+  vrd <- vrd |>
+    filter(age %in% ages, yod >= yrs[1], yod <= yrs[2]) |>
+    group_by(yod, cod_rankable) |>
+    summarize(n = n()) |>
+    ungroup() |>
+    drop_na(cod_rankable)
+
+  ls <- lapply(unique(vrd$yod), \(x) {
+    vrd |>
+      filter(yod == x) |>
+      mutate(rank = rank_cod(-n)) |>
+      mutate(yrank = nranks - rank) |>
+      filter(rank %in% 1:nranks) |>
+      arrange(rank)
+  })
+
+  list_rbind(ls)
+})
+
+output$plot <- renderPlot({
+  req(vrd2())
+  
+  cod_bump_chart(vrd2())
+})
+```
+
