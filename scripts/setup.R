@@ -1,7 +1,14 @@
+library(tidyverse)
+
+source("scripts/fn.R")
+
+vrd <- readRDS("data/vr_deaths_2014_2023.rds")
+cod <- readRDS("data/cod_rankable.rds")
+cod_colors <- readRDS("data/cod_colors.rds")
+
 # Selector lists for Shiny inputs
 
-
-# Age
+## Age
 
 maxage <- max(vrd$age, na.rm = TRUE)
 
@@ -13,17 +20,18 @@ age <- 0
 
 for (i in 1:ngroups) {
   agegroups[[i]] <- paste(age:(age + 4), collapse = ";")
+
   names(agegroups)[i] <- paste(age, "to", age + 4)
+
   age <- age + 5
 }
 
 agelist <- c(
-  list("All ages" = paste(0:maxage, collapse = ";")),
+  list("All" = paste(0:maxage, collapse = ";")),
   agegroups
 )
 
-
-# Sex
+## Sex
 
 sexlist <- list(
   "Both" = "F;M;U",
@@ -31,8 +39,7 @@ sexlist <- list(
   "Male" = "M"
 )
 
-
-# Race
+## Race
 
 racelist <- list(
   "racewht",

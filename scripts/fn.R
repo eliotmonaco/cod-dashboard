@@ -164,8 +164,7 @@ config_vrd <- function(df, nranks, years, ages, sex, race, palette) {
       age %in% ages,
       yod >= years[1], yod <= years[2],
       sex %in% sex
-    ) |>
-    mutate(yod = factor(yod, levels = years[1]:years[2]))
+    )
 
   if (race != "all") {
     df <- df |>
@@ -189,21 +188,18 @@ config_vrd <- function(df, nranks, years, ages, sex, race, palette) {
   })
 
   list_rbind(ls) |>
-    mutate(yod = as.numeric(as.character(yod))) |>
     left_join(palette, by = c("cod_rankable" = "cod"))
 }
 
-cod_bump_chart <- function(df) {
+cod_bump_chart <- function(df, xvals) {
   requireNamespace("tidyverse")
 
   # Extend x-axis to make room for labels
-  yrs <- sort(unique(df$yod))
+  xseq <- xvals[1]:xvals[2]
 
-  xbrk <- c(yrs, max(yrs):(max(yrs) + 2))
-
-  # Filter data for labels
+  # Filter data for margin labels
   dftxt <- df |>
-    filter(yod == max(yrs))
+    filter(yod == max(xseq))
 
   ties <- unique(dftxt$yrank[duplicated(dftxt$yrank)])
 
@@ -212,6 +208,12 @@ cod_bump_chart <- function(df) {
 
   dftxt2 <- dftxt |> # tied labels
     filter(yrank %in% ties)
+
+  # Filter data for plot labels
+  dftxt3 <- df |>
+    filter(yod != max(xseq), !cod_rankable %in% dftxt$cod_rankable) |>
+    arrange(desc(yod)) |>
+    distinct(cod_rankable, .keep_all = TRUE)
 
   # Base text size
   size <- 20
@@ -234,30 +236,42 @@ cod_bump_chart <- function(df) {
     ggbump::geom_bump(linewidth = 6) +
     geom_point(size = 10) +
     geom_point(size = 4, color = "white") +
-    geom_text(
-      aes(label = str_wrap(cod_rankable, 40)),
+    geom_text( # margin labels
+      aes(label = str_wrap(cod_rankable, 30)),
       size = label_size,
       lineheight = .8,
       fontface = "bold",
       data = dftxt1,
-      x = max(as.numeric(df$yod)) + .2,
+      x = xvals[2] + .25,
       hjust = 0
     ) +
-    ggrepel::geom_label_repel(
-      aes(label = str_wrap(cod_rankable, 40)),
+    ggrepel::geom_label_repel( # margin labels
+      aes(label = str_wrap(cod_rankable, 30)),
       size = label_size,
       lineheight = .8,
       fontface = "bold",
       data = dftxt2,
       hjust = 0,
       direction = "y",
-      nudge_x = 2,
+      xlim = c(xvals[2] + .25, xvals[2] + 5),
       label.padding = .5
     ) +
-    coord_cartesian(xlim = c(min(xbrk), max(xbrk))) +
+    ggrepel::geom_label_repel( # plot labels
+      aes(label = str_wrap(cod_rankable, 30)),
+      size = label_size / 1.5,
+      fill = "#ffffffee",
+      lineheight = .8,
+      fontface = "bold",
+      data = dftxt3,
+      hjust = .5,
+      direction = "y",
+      min.segment.length = Inf
+    ) +
+    coord_cartesian(xlim = xvals, clip = "off") +
     scale_x_continuous(
-      breaks = xbrk,
-      labels = c(yrs, "", "", "")
+      breaks = xseq,
+      labels = xseq,
+      expand = expansion(mult = c(.025, .025))
     ) +
     scale_y_continuous(
       breaks = sort(unique(df$yrank)),
@@ -272,7 +286,7 @@ cod_bump_chart <- function(df) {
     theme(
       legend.position = "none",
       panel.grid = element_blank(),
-      margins = margin(r = 50)
+      margins = margin(r = 350)
     )
 }
 

@@ -11,18 +11,7 @@ server: shiny
 ```{r message=FALSE}
 #| context: setup
 
-library(tidyverse)
-library(ggiraph)
-
-source("scripts/fn.R")
-
-vrd <- readRDS("data/vr_deaths_2014_2023.rds")
-cod <- readRDS("data/cod_rankable.rds")
-cod_colors <- readRDS("data/cod_colors.rds")
-```
-
-```{r}
-source("scripts/selectors.R")
+source("scripts/setup.R")
 ```
 
 # {.sidebar}
@@ -102,9 +91,9 @@ vrd2 <- reactive({
 })
 
 output$plot <- renderPlot({
-  req(vrd2())
+  req(vrd2(), input$years)
   
-  cod_bump_chart(vrd2())
+  cod_bump_chart(vrd2(), input$years)
 })
 ```
 
