@@ -16,34 +16,27 @@ library(ggiraph)
 
 source("scripts/fn.R")
 
-cod <- readRDS("data/cod_rankable.rds")
 vrd <- readRDS("data/vr_deaths_2014_2023.rds")
+cod <- readRDS("data/cod_rankable.rds")
+cod_colors <- readRDS("data/cod_colors.rds")
 ```
 
 ```{r}
-maxage <- max(vrd$age, na.rm = TRUE)
-
-ngroups <- ceiling(maxage / 5)
-
-agegroups <- list()
-
-age <- 0
-
-for (i in 1:ngroups) {
-  agegroups[[i]] <- paste(age:(age + 4), collapse = ";")
-  names(agegroups)[i] <- paste(age, "to", age + 4)
-  age <- age + 5
-}
-
-agegroups <- c(
-  list("All ages" = paste(0:maxage, collapse = ";")),
-  agegroups
-)
+source("scripts/selectors.R")
 ```
 
 # {.sidebar}
 
 ```{r}
+sliderInput(
+  inputId = "nranks",
+  label = "Number of ranks",
+  min = 1,
+  max = length(cod),
+  value = 10,
+  step = 1
+)
+
 sliderInput(
   inputId = "years",
   label = "Years",
@@ -56,20 +49,27 @@ sliderInput(
   step = 1,
   sep = ""
 )
+```
 
+#### Demographics
+
+```{r}
 selectInput(
   inputId = "age",
-  label = "Ages",
-  choices = agegroups
+  label = "Age",
+  choices = agelist
 )
 
-sliderInput(
-  inputId = "nranks",
-  label = "Number of ranks",
-  min = 1,
-  max = length(cod),
-  value = 10,
-  step = 1
+selectInput(
+  inputId = "sex",
+  label = "Sex",
+  choices = sexlist
+)
+
+selectInput(
+  inputId = "race",
+  label = "Race",
+  choices = racelist
 )
 ```
 
@@ -83,31 +83,22 @@ plotOutput("plot")
 #| context: server
 
 vrd2 <- reactive({
-  req(input$age, input$years, input$nranks)
+  req(
+    input$nranks,
+    input$years,
+    input$age,
+    input$sex
+  )
   
-  yrs <- input$years
-
-  ages <- unlist(strsplit(input$age, ";"))
-  
-  nranks <- input$nranks
-
-  vrd <- vrd |>
-    filter(age %in% ages, yod >= yrs[1], yod <= yrs[2]) |>
-    group_by(yod, cod_rankable) |>
-    summarize(n = n()) |>
-    ungroup() |>
-    drop_na(cod_rankable)
-
-  ls <- lapply(unique(vrd$yod), \(x) {
-    vrd |>
-      filter(yod == x) |>
-      mutate(rank = rank_cod(-n)) |>
-      mutate(yrank = nranks - rank) |>
-      filter(rank %in% 1:nranks) |>
-      arrange(rank)
-  })
-
-  list_rbind(ls)
+  config_vrd(
+    vrd,
+    nranks = input$nranks,
+    years = input$years,
+    ages = unlist(strsplit(input$age, ";")),
+    sex = unlist(strsplit(input$sex, ";")),
+    race = input$race,
+    palette = cod_colors
+  )
 })
 
 output$plot <- renderPlot({

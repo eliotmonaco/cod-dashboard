@@ -156,6 +156,43 @@ rank_cod <- function(x) {
   as.numeric(factor(r))
 }
 
+config_vrd <- function(df, nranks, years, ages, sex, race, palette) {
+  requireNamespace("tidyverse")
+
+  df <- df |>
+    filter(
+      age %in% ages,
+      yod >= years[1], yod <= years[2],
+      sex %in% sex
+    ) |>
+    mutate(yod = factor(yod, levels = years[1]:years[2]))
+
+  if (race != "all") {
+    df <- df |>
+      filter(.data[[race]] == "Y")
+  }
+
+  df <- df |>
+    group_by(yod, cod_rankable) |>
+    summarize(n = n()) |>
+    ungroup() |>
+    drop_na(cod_rankable)
+
+  ls <- lapply(unique(df$yod), \(x) {
+    df |>
+      filter(yod == x) |>
+      mutate(rank = rank_cod(-n)) |>
+      mutate(yrank = nranks - rank) |>
+      filter(rank %in% 1:nranks) |>
+      complete(yod) |>
+      arrange(rank)
+  })
+
+  list_rbind(ls) |>
+    mutate(yod = as.numeric(as.character(yod))) |>
+    left_join(palette, by = c("cod_rankable" = "cod"))
+}
+
 cod_bump_chart <- function(df) {
   requireNamespace("tidyverse")
 
@@ -186,17 +223,12 @@ cod_bump_chart <- function(df) {
 
   label_size <- (size - (10 / maxrank * exp)) / 3
 
-  # Colors
-  makecolors <- colorRampPalette(paletteer::paletteer_d("yarrr::basel"))
-
-  pal <- makecolors(length(unique(df$cod_rankable)))
-
   # Plot
   df |>
     ggplot(aes(
       x = yod,
       y = yrank,
-      color = cod_rankable,
+      color = colors,
       group = cod_rankable
     )) +
     ggbump::geom_bump(linewidth = 6) +
@@ -231,7 +263,7 @@ cod_bump_chart <- function(df) {
       breaks = sort(unique(df$yrank)),
       labels = rev(sort(unique(df$rank)))
     ) +
-    scale_color_manual(values = sample(pal, length(pal))) +
+    scale_color_identity() +
     labs(
       x = "\nYear",
       y = "Rank\n"

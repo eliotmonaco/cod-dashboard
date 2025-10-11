@@ -1,42 +1,22 @@
 
 library(tidyverse)
-library(ggbump)
 
 source("scripts/fn.R")
 
 vrd <- readRDS("data/vr_deaths_2014_2023.rds")
+cod_colors <- readRDS("data/cod_colors.rds")
 
-nranks <- 10
+df <- config_vrd(
+  vrd,
+  nranks = 10,
+  years = c(2014, 2023),
+  ages = 1:115,
+  sex = c("F", "M", "U"),
+  race = "racechin",
+  palette = cod_colors
+)
 
-df <- vrd |>
-  # filter(age %in% 0:4) |>
-  group_by(yod, cod_rankable) |>
-  summarize(n = n()) |>
-  ungroup() |>
-  drop_na(cod_rankable)
-
-ls <- lapply(unique(df$yod), \(x) {
-  df |>
-    filter(yod == x) |>
-    mutate(rank = rank_cod(-n),) |>
-    mutate(yrank = nranks - rank) |>
-    filter(rank %in% 1:nranks) |>
-    arrange(rank)
-})
-
-df <- list_rbind(ls)
-
-cod_bump_chart(df)
-
-
-
-
-
-
-
-
-
-
-
+df |>
+  cod_bump_chart()
 
 

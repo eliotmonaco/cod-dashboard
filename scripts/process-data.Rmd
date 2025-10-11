@@ -1,0 +1,114 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+
+source("fn.R")
+```
+
+Import list of rankable CODs.
+
+```{r}
+cod <- readRDS("../data/cod_rankable.rds")
+```
+
+Source and compile vital records deaths files.
+
+```{r}
+source("get-deaths.R")
+```
+
+Configure deaths dataset.
+
+```{r}
+fmt <- paste0("ID%0", nchar(nrow(vrd)), "d")
+
+vrd <- vrd |>
+  mutate(
+    yod = as.numeric(yod),
+    age = as.numeric(age),
+    rowid = sprintf(fmt, row_number()), .before = 1
+  ) |>
+  filter(citylimit == "Y")
+
+# Clean ICD codes
+vrd <- fix_vital_icd(vrd, "rowid")
+
+# Validate ICD codes
+vrd |>
+  select(cod) |>
+  filter(!grepl("^[[:upper:]]\\d{2,3}$", cod))
+```
+
+Assign rankable CODs to deaths dataset.
+
+```{r}
+# Create regex patterns
+cod <- lapply(cod, \(x) {
+  paste(paste0("^", sub("\\.", "", x)), collapse = "|")
+})
+
+# Get rankable COD categories
+cod_ranked <- sapply(vrd$cod, match_icd, ls = cod)
+
+# Check if any ICD code was matched to > 1 COD
+any(sapply(cod_ranked, length) > 1)
+
+# Add to `vrd`
+vrd$cod_rankable <- cod_ranked
+```
+
+Assign color palette to rankable CODs.
+
+```{r}
+pal <- colorRampPalette(paletteer::paletteer_d("yarrr::basel"))
+
+cod_ranked <- vrd |>
+  count(cod_rankable) |>
+  arrange(desc(n)) |>
+  drop_na(cod_rankable) |>
+  pull(cod_rankable)
+
+clr <- pal(length(cod_ranked))
+
+i <- which(clr == "#CD0D27")
+
+clr <- c(clr[i:length(clr)], clr[1:(i - 1)])
+
+l <- rep(letters[1:4], 20)[1:43]
+
+sq <- sort(setNames(l, seq_along(l)))
+
+clr <- clr[as.numeric(names(sq))]
+
+cod_colors <- data.frame(
+  cod = cod_ranked,
+  colors = factor(clr, levels = clr)
+)
+```
+
+Plot assigned colors.
+
+```{r fig.width=10, fig.height=15}
+cod_colors |>
+  ggplot(aes(x = 1, y = colors, fill = colors)) +
+  geom_bar(stat = "identity") +
+  scale_fill_identity() +
+  geom_text(
+    aes(label = cod),
+    position = position_nudge(x = -.5),
+    color = "white",
+    fontface = "bold"
+  )
+```
+
+Save.
+
+```{r}
+saveRDS(vrd, "../data/vr_deaths_2014_2023.rds")
+saveRDS(cod_colors, "../data/cod_colors.rds")
+```
+
