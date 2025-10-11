@@ -1,22 +1,19 @@
 
 library(tidyverse)
 
-source("scripts/fn.R")
-
-vrd <- readRDS("data/vr_deaths_2014_2023.rds")
-cod_colors <- readRDS("data/cod_colors.rds")
+source("scripts/setup.R")
 
 df <- config_vrd(
   vrd,
   nranks = 10,
   years = c(2014, 2023),
-  ages = 1:115,
+  ages = 1:120,
   sex = c("F", "M", "U"),
-  race = "racechin",
+  race = racelist[[1]],
   palette = cod_colors
 )
 
 df |>
-  cod_bump_chart()
+  cod_bump_chart(xvals = c(2014, 2023))
 
 
