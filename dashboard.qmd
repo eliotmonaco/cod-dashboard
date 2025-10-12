@@ -40,7 +40,7 @@ sliderInput(
 )
 ```
 
-#### Demographics
+#### Demographic filters
 
 ```{r}
 selectInput(
@@ -91,7 +91,7 @@ plotOutput("plot")
 
 vrd2 <- reactive({
   req(
-    input$nranks,
+    # input$nranks,
     input$years,
     input$age,
     input$sex,
@@ -103,7 +103,7 @@ vrd2 <- reactive({
   
   config_vrd(
     vrd,
-    nranks_input = input$nranks,
+    # nranks_input = input$nranks,
     years_input = input$years,
     age_input = unlist(strsplit(input$age, ";")),
     sex_input = unlist(strsplit(input$sex, ";")),
@@ -116,9 +116,9 @@ vrd2 <- reactive({
 })
 
 output$plot <- renderPlot({
-  req(vrd2(), input$years)
+  req(vrd2(), input$years, input$nranks)
   
-  cod_bump_chart(vrd2(), input$years)
+  cod_bump_chart(vrd2(), input$years, input$nranks)
 })
 ```
 

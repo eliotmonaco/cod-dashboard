@@ -158,7 +158,7 @@ rank_cod <- function(x) {
 
 config_vrd <- function(
     df,
-    nranks_input,
+    # nranks_input,
     years_input,
     age_input,
     sex_input,
@@ -203,12 +203,15 @@ config_vrd <- function(
     ungroup() |>
     drop_na(cod_rankable)
 
+  maxranks <- 52
+
   ls <- lapply(unique(df$yod), \(x) {
     df |>
       filter(yod == x) |>
       mutate(rank = rank_cod(-n)) |>
-      mutate(yrank = nranks_input - rank) |>
-      filter(rank %in% 1:nranks_input) |>
+      # mutate(yrank = nranks_input - rank) |>
+      # filter(rank %in% 1:nranks_input) |>
+      mutate(yrank = maxranks - rank) |>
       complete(yod) |>
       arrange(rank)
   })
@@ -217,15 +220,30 @@ config_vrd <- function(
     left_join(palette, by = c("cod_rankable" = "cod"))
 }
 
-cod_bump_chart <- function(df, xvals) {
+cod_bump_chart <- function(df, xvals, nranks) {
   requireNamespace("tidyverse")
 
-  # Extend x-axis to make room for labels
+  # x-axis scale
   xseq <- xvals[1]:xvals[2]
 
-  # Filter data for margin labels
+  xexp <- 3
+
+  xbrk <- seq(xseq[1], xseq[length(xseq)] + xexp)
+
+  xlab <- c(xseq, rep("", xexp))
+
+  # y-axis scale
+  yseq <- df |>
+    filter(rank %in% 1:nranks) |>
+    distinct(rank, .keep_all = TRUE) |>
+    select(rank, yrank)
+
+  # x-axis title position
+  xpos <- .5 - (.95 / (length(xbrk) - 1) * xexp / 2)
+
+  # Filter data for right side labels
   dftxt <- df |>
-    filter(yod == max(xseq))
+    filter(yod == max(xseq), rank %in% 1:nranks)
 
   ties <- unique(dftxt$yrank[duplicated(dftxt$yrank)])
 
@@ -237,20 +255,22 @@ cod_bump_chart <- function(df, xvals) {
 
   # Filter data for plot labels
   dftxt3 <- df |>
-    filter(yod != max(xseq), !cod_rankable %in% dftxt$cod_rankable) |>
+    filter(
+      yod != max(xseq),
+      rank %in% 1:nranks,
+      !cod_rankable %in% dftxt$cod_rankable
+    ) |>
     arrange(desc(yod)) |>
     distinct(cod_rankable, .keep_all = TRUE)
 
   # Base text size
   size <- 20
 
-  # Responsive label text size
-  maxrank <- max(df$rank)
+  # Responsive label size
+  texp <- ifelse(nranks > 10, nranks - 10, 0)
 
-  exp <- ifelse(maxrank > 10, maxrank - 10, 0)
+  label_size <- (size - (10 / nranks * texp)) / 3
 
-  label_size <- (size - (10 / maxrank * exp)) / 3
-browser()
   # Plot
   df |>
     ggplot(aes(
@@ -259,29 +279,45 @@ browser()
       color = colors,
       group = cod_rankable
     )) +
-    ggbump::geom_bump(linewidth = 6) +
+    ggbump::geom_bump(
+      linewidth = 6,
+      smooth = 8
+    ) +
     geom_point(size = 10) +
     geom_point(size = 4, color = "white") +
-    geom_text( # margin labels
+    ggrepel::geom_label_repel( # right side labels (tied)
       aes(label = str_wrap(cod_rankable, 30)),
       size = label_size,
       lineheight = .8,
       fontface = "bold",
-      data = dftxt1,
-      x = xvals[2] + .25,
-      hjust = 0
-    ) +
-    ggrepel::geom_label_repel( # margin labels
-      aes(label = str_wrap(cod_rankable, 30)),
-      size = label_size,
-      lineheight = .8,
-      fontface = "bold",
-      data = dftxt2,
+      data = dftxt,
       hjust = 0,
       direction = "y",
       xlim = c(xvals[2] + .25, xvals[2] + 5),
-      label.padding = .5
+      label.padding = .5,
+      point.padding = 2,
+      min.segment.length = unit(.4, "in")
     ) +
+    # geom_text( # right side labels (untied)
+    #   aes(label = str_wrap(cod_rankable, 30)),
+    #   size = label_size,
+    #   lineheight = .8,
+    #   fontface = "bold",
+    #   data = dftxt1,
+    #   x = xvals[2] + .25,
+    #   hjust = 0
+    # ) +
+    # ggrepel::geom_label_repel( # right side labels (tied)
+    #   aes(label = str_wrap(cod_rankable, 30)),
+    #   size = label_size,
+    #   lineheight = .8,
+    #   fontface = "bold",
+    #   data = dftxt2,
+    #   hjust = 0,
+    #   direction = "y",
+    #   xlim = c(xvals[2] + .25, xvals[2] + 5),
+    #   label.padding = .5
+    # ) +
     ggrepel::geom_label_repel( # plot labels
       aes(label = str_wrap(cod_rankable, 30)),
       size = 5,
@@ -290,18 +326,24 @@ browser()
       fontface = "bold",
       data = dftxt3,
       hjust = .5,
-      direction = "y",
+      direction = "both",
       min.segment.length = Inf
     ) +
-    coord_cartesian(xlim = xvals, clip = "off") +
+    coord_cartesian(
+      xlim = c(min(xbrk), max(xbrk)),
+      ylim = c(min(yseq$yrank), max(yseq$yrank))#,
+      # clip = "off"
+    ) +
     scale_x_continuous(
-      breaks = xseq,
-      labels = xseq,
+      breaks = xbrk,
+      labels = xlab,
       expand = expansion(mult = c(.025, .025))
     ) +
     scale_y_continuous(
-      breaks = sort(unique(df$yrank)),
-      labels = rev(sort(unique(df$rank)))
+      # breaks = sort(unique(df$yrank)),
+      # labels = rev(sort(unique(df$rank)))
+      breaks = yseq$yrank,
+      labels = yseq$rank
     ) +
     scale_color_identity() +
     labs(
@@ -311,8 +353,9 @@ browser()
     theme_minimal(base_size = size) +
     theme(
       legend.position = "none",
+      axis.title.x = element_text(hjust = xpos),
       panel.grid = element_blank(),
-      margins = margin(r = 350)
+      margins = margin(r = 0)
     )
 }
 

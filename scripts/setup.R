@@ -34,7 +34,7 @@ agelist <- c(
 ## Sex
 
 sexlist <- list(
-  "Both" = "F;M;U",
+  "All" = "F;M;U",
   "Female" = "F",
   "Male" = "M"
 )
