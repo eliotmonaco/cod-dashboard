@@ -42,6 +42,7 @@ sexlist <- list(
 ## Race
 
 racelist <- list(
+  "all",
   "racewht",
   "raceblk",
   "raceind",
@@ -60,6 +61,7 @@ racelist <- list(
 )
 
 names(racelist) <- c(
+  "All",
   "White",
   "Black",
   "American Indian or Alaska Native",
@@ -77,8 +79,61 @@ names(racelist) <- c(
   "Other"
 )
 
-racelist <- c(
+# Hispanic origin
+
+hispaniclist <- list(
+  "all",
+  "mexican",
+  "puer",
+  "cuban",
+  "hother"
+)
+
+names(hispaniclist) <- c(
+  "All",
+  "Mexican",
+  "Puerto Rican",
+  "Cuban",
+  "Other"
+)
+
+# Education level
+
+edlist <- as.list(as.character(1:9))
+
+names(edlist) <- c(
+  "8th Grade or Less",
+  "9th through 12th",
+  "High School Grade or GED",
+  "Some College, No Degree",
+  "Associate Degree",
+  "Bachelors Degree",
+  "Masters Degree",
+  "Doctorate Degree or Professional Degree",
+  "Unknown"
+)
+
+edlist <- c(
   list("All" = "all"),
-  racelist[sort(names(racelist))]
+  edlist
+)
+
+# Pregnancy status
+
+preglist <- as.list(as.character(c(1:4, 7:9)))
+
+names(preglist) <- c(
+  "Not pregnant within past year",
+  "Pregnant at the time of death",
+  "Not pregnant, but pregnant within 42 days of death",
+  "Not pregnant, but pregnant 43 days to 1 year before death",
+  "Unknown if prengnant within last year",
+  "Not applicable",
+  "Not on certificate"
+)
+
+preglist <- c(
+  list("All" = "all"),
+  preglist
 )
 

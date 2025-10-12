@@ -60,6 +60,24 @@ selectInput(
   label = "Race",
   choices = racelist
 )
+
+selectInput(
+  inputId = "hispanic",
+  label = "Hispanic origin",
+  choices = hispaniclist
+)
+
+selectInput(
+  inputId = "education",
+  label = "Education level",
+  choices = edlist
+)
+
+selectInput(
+  inputId = "pregnancy",
+  label = "Pregnancy status",
+  choices = preglist
+)
 ```
 
 # Plot
@@ -76,16 +94,23 @@ vrd2 <- reactive({
     input$nranks,
     input$years,
     input$age,
-    input$sex
+    input$sex,
+    input$race,
+    input$hispanic,
+    input$education,
+    input$pregnancy
   )
   
   config_vrd(
     vrd,
-    nranks = input$nranks,
-    years = input$years,
-    ages = unlist(strsplit(input$age, ";")),
-    sex = unlist(strsplit(input$sex, ";")),
-    race = input$race,
+    nranks_input = input$nranks,
+    years_input = input$years,
+    age_input = unlist(strsplit(input$age, ";")),
+    sex_input = unlist(strsplit(input$sex, ";")),
+    race_input = input$race,
+    hispanic_input = input$hispanic,
+    education_input = input$education,
+    pregnancy_input = input$pregnancy,
     palette = cod_colors
   )
 })

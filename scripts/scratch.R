@@ -5,11 +5,13 @@ source("scripts/setup.R")
 
 df <- config_vrd(
   vrd,
-  nranks = 10,
-  years = c(2014, 2023),
-  ages = 1:120,
-  sex = c("F", "M", "U"),
-  race = racelist[[1]],
+  nranks_input = 10,
+  years_input = c(2014, 2023),
+  age_input = 1:120,
+  # sex_input = c("F", "M", "U"),
+  sex_input = "F",
+  race_input = racelist[[1]],
+  hispanic_input = hispaniclist[[1]],
   palette = cod_colors
 )
 

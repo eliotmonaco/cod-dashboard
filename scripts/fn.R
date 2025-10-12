@@ -156,19 +156,45 @@ rank_cod <- function(x) {
   as.numeric(factor(r))
 }
 
-config_vrd <- function(df, nranks, years, ages, sex, race, palette) {
+config_vrd <- function(
+    df,
+    nranks_input,
+    years_input,
+    age_input,
+    sex_input,
+    race_input,
+    hispanic_input,
+    education_input,
+    pregnancy_input,
+    palette) {
   requireNamespace("tidyverse")
 
   df <- df |>
     filter(
-      age %in% ages,
-      yod >= years[1], yod <= years[2],
-      sex %in% sex
+      age %in% age_input,
+      yod >= years_input[1],
+      yod <= years_input[2],
+      sex %in% sex_input
     )
 
-  if (race != "all") {
+  if (race_input != "all") {
     df <- df |>
-      filter(.data[[race]] == "Y")
+      filter(.data[[race_input]] == "Y")
+  }
+
+  if (hispanic_input != "all") {
+    df <- df |>
+      filter(.data[[hispanic_input]] == "H")
+  }
+
+  if (education_input != "all") {
+    df <- df |>
+      filter(ed2010 == education_input)
+  }
+
+  if (pregnancy_input != "all") {
+    df <- df |>
+      filter(pregnancy == pregnancy_input)
   }
 
   df <- df |>
@@ -181,8 +207,8 @@ config_vrd <- function(df, nranks, years, ages, sex, race, palette) {
     df |>
       filter(yod == x) |>
       mutate(rank = rank_cod(-n)) |>
-      mutate(yrank = nranks - rank) |>
-      filter(rank %in% 1:nranks) |>
+      mutate(yrank = nranks_input - rank) |>
+      filter(rank %in% 1:nranks_input) |>
       complete(yod) |>
       arrange(rank)
   })
@@ -224,7 +250,7 @@ cod_bump_chart <- function(df, xvals) {
   exp <- ifelse(maxrank > 10, maxrank - 10, 0)
 
   label_size <- (size - (10 / maxrank * exp)) / 3
-
+browser()
   # Plot
   df |>
     ggplot(aes(
@@ -258,8 +284,8 @@ cod_bump_chart <- function(df, xvals) {
     ) +
     ggrepel::geom_label_repel( # plot labels
       aes(label = str_wrap(cod_rankable, 30)),
-      size = label_size / 1.5,
-      fill = "#ffffffee",
+      size = 5,
+      fill = "#ffffffdd",
       lineheight = .8,
       fontface = "bold",
       data = dftxt3,
