@@ -1,4 +1,6 @@
+library(shinyWidgets)
 library(tidyverse)
+library(ggtext)
 
 source("scripts/fn.R")
 

@@ -7,7 +7,6 @@ yrs <- c(2014, 2023)
 
 df <- config_vrd(
   vrd,
-  # nranks_input = 10,
   years_input = yrs,
   age_input = 1:120,
   sex_input = c("F", "M", "U"),
@@ -20,6 +19,5 @@ df <- config_vrd(
 )
 
 df |>
-  cod_bump_chart(xvals = yrs, nranks = 10)
-
+  cod_bump_chart(xvals = yrs, nranks = 25)
 

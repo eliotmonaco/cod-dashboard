@@ -16,6 +16,8 @@ source("scripts/setup.R")
 
 # {.sidebar}
 
+## Axis ranges
+
 ```{r}
 sliderInput(
   inputId = "nranks",
@@ -40,7 +42,7 @@ sliderInput(
 )
 ```
 
-#### Demographic filters
+## Demographic filters
 
 ```{r}
 selectInput(
@@ -91,7 +93,6 @@ plotOutput("plot")
 
 vrd2 <- reactive({
   req(
-    # input$nranks,
     input$years,
     input$age,
     input$sex,
@@ -103,7 +104,6 @@ vrd2 <- reactive({
   
   config_vrd(
     vrd,
-    # nranks_input = input$nranks,
     years_input = input$years,
     age_input = unlist(strsplit(input$age, ";")),
     sex_input = unlist(strsplit(input$sex, ";")),

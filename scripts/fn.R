@@ -150,15 +150,8 @@ match_icd <- function(x, ls) {
   }
 }
 
-rank_cod <- function(x) {
-  r <- rank(x, ties.method = "min")
-
-  as.numeric(factor(r))
-}
-
 config_vrd <- function(
     df,
-    # nranks_input,
     years_input,
     age_input,
     sex_input,
@@ -208,9 +201,7 @@ config_vrd <- function(
   ls <- lapply(unique(df$yod), \(x) {
     df |>
       filter(yod == x) |>
-      mutate(rank = rank_cod(-n)) |>
-      # mutate(yrank = nranks_input - rank) |>
-      # filter(rank %in% 1:nranks_input) |>
+      mutate(rank = rank(-n, ties.method = "first")) |>
       mutate(yrank = maxranks - rank) |>
       complete(yod) |>
       arrange(rank)
@@ -222,11 +213,12 @@ config_vrd <- function(
 
 cod_bump_chart <- function(df, xvals, nranks) {
   requireNamespace("tidyverse")
+  requireNamespace("ggtext")
 
   # x-axis scale
   xseq <- xvals[1]:xvals[2]
 
-  xexp <- 3
+  xexp <- 4
 
   xbrk <- seq(xseq[1], xseq[length(xseq)] + xexp)
 
@@ -239,26 +231,27 @@ cod_bump_chart <- function(df, xvals, nranks) {
     select(rank, yrank)
 
   # x-axis title position
-  xpos <- .5 - (.95 / (length(xbrk) - 1) * xexp / 2)
+  xpos <- .5 - (.97 / (length(xbrk) - 1) * xexp / 2)
 
   # Filter data for right side labels
-  dftxt <- df |>
+  dflabr <- df |>
     filter(yod == max(xseq), rank %in% 1:nranks)
 
-  ties <- unique(dftxt$yrank[duplicated(dftxt$yrank)])
+  ties <- unique(dflabr$n[duplicated(dflabr$n)])
 
-  dftxt1 <- dftxt |> # untied labels
-    filter(!yrank %in% ties)
-
-  dftxt2 <- dftxt |> # tied labels
-    filter(yrank %in% ties)
+  dflabr <- dflabr |>
+    mutate(label = if_else(
+      n %in% ties,
+      paste0(cod_rankable, " (", n, ")*"),
+      paste0(cod_rankable, " (", n, ")")
+    ))
 
   # Filter data for plot labels
-  dftxt3 <- df |>
+  dflabp <- df |>
     filter(
       yod != max(xseq),
       rank %in% 1:nranks,
-      !cod_rankable %in% dftxt$cod_rankable
+      !cod_rankable %in% dflabr$cod_rankable
     ) |>
     arrange(desc(yod)) |>
     distinct(cod_rankable, .keep_all = TRUE)
@@ -266,10 +259,30 @@ cod_bump_chart <- function(df, xvals, nranks) {
   # Base text size
   size <- 20
 
-  # Responsive label size
-  texp <- ifelse(nranks > 10, nranks - 10, 0)
+  # Responsive labels (right side)
+  maxranks <- sapply(unique(df$yod), \(x) {
+    length(unique(df$cod_rankable[df$yod == x]))
+  }) |>
+    max(na.rm = TRUE)
 
-  label_size <- (size - (10 / nranks * texp)) / 3
+  incr <- 10 / (maxranks - 10)
+
+  addranks <- ifelse(nranks > 10, nranks - 10, 0)
+
+  addranks <- ifelse(nranks > maxranks, maxranks - 10, addranks)
+
+  label_size <- (size - incr * addranks) / 3
+
+  incr <- 30 / (maxranks - 10)
+
+  label_wrap <- ceiling((30 + incr * addranks))
+
+  # Responsive lines and points
+  line_size <- 6; pt_size1 <- 10; pt_size2 <- 4
+
+  if (nranks > 20) {
+    line_size <- 4; pt_size1 <- 6; pt_size2 <- 2
+  }
 
   # Plot
   df |>
@@ -280,81 +293,70 @@ cod_bump_chart <- function(df, xvals, nranks) {
       group = cod_rankable
     )) +
     ggbump::geom_bump(
-      linewidth = 6,
+      linewidth = line_size,
       smooth = 8
     ) +
-    geom_point(size = 10) +
-    geom_point(size = 4, color = "white") +
-    ggrepel::geom_label_repel( # right side labels (tied)
-      aes(label = str_wrap(cod_rankable, 30)),
+    geom_point(size = pt_size1) +
+    geom_point(size = pt_size2, color = "white") +
+    geom_text( # right side labels
+      aes(label = str_wrap(label, label_wrap)),
       size = label_size,
       lineheight = .8,
       fontface = "bold",
-      data = dftxt,
-      hjust = 0,
-      direction = "y",
-      xlim = c(xvals[2] + .25, xvals[2] + 5),
-      label.padding = .5,
-      point.padding = 2,
-      min.segment.length = unit(.4, "in")
+      data = dflabr,
+      x = xvals[2] + .25,
+      hjust = 0
     ) +
-    # geom_text( # right side labels (untied)
-    #   aes(label = str_wrap(cod_rankable, 30)),
-    #   size = label_size,
-    #   lineheight = .8,
-    #   fontface = "bold",
-    #   data = dftxt1,
-    #   x = xvals[2] + .25,
-    #   hjust = 0
-    # ) +
-    # ggrepel::geom_label_repel( # right side labels (tied)
-    #   aes(label = str_wrap(cod_rankable, 30)),
-    #   size = label_size,
-    #   lineheight = .8,
-    #   fontface = "bold",
-    #   data = dftxt2,
-    #   hjust = 0,
-    #   direction = "y",
-    #   xlim = c(xvals[2] + .25, xvals[2] + 5),
-    #   label.padding = .5
-    # ) +
     ggrepel::geom_label_repel( # plot labels
       aes(label = str_wrap(cod_rankable, 30)),
       size = 5,
       fill = "#ffffffdd",
       lineheight = .8,
       fontface = "bold",
-      data = dftxt3,
+      data = dflabp,
       hjust = .5,
-      direction = "both",
+      direction = "y",
       min.segment.length = Inf
     ) +
     coord_cartesian(
       xlim = c(min(xbrk), max(xbrk)),
-      ylim = c(min(yseq$yrank), max(yseq$yrank))#,
-      # clip = "off"
+      ylim = c(min(yseq$yrank), max(yseq$yrank))
     ) +
     scale_x_continuous(
       breaks = xbrk,
       labels = xlab,
-      expand = expansion(mult = c(.025, .025))
+      expand = expansion(mult = .015)
     ) +
     scale_y_continuous(
-      # breaks = sort(unique(df$yrank)),
-      # labels = rev(sort(unique(df$rank)))
       breaks = yseq$yrank,
-      labels = yseq$rank
+      labels = yseq$rank,
+      expand = expansion(mult = c(.05 - .002 * addranks, .025))
     ) +
     scale_color_identity() +
     labs(
-      x = "\nYear",
-      y = "Rank\n"
+      x = "Year",
+      y = "Rank",
+      caption = paste(
+        "**Note:** Tied counts are ranked by their first appearance",
+        "in the data and are denoted by an asterisk (*)."
+      )
     ) +
     theme_minimal(base_size = size) +
     theme(
       legend.position = "none",
-      axis.title.x = element_text(hjust = xpos),
+      axis.title.x = element_text(
+        hjust = xpos,
+        margin = margin(t = 10)
+      ),
+      axis.title.y = element_text(
+        margin = margin(r = 10)
+      ),
       panel.grid = element_blank(),
+      plot.caption = element_markdown(
+        color = "#555",
+        size = 14,
+        hjust = 0
+      ),
       margins = margin(r = 0)
     )
 }
