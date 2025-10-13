@@ -260,22 +260,11 @@ cod_bump_chart <- function(df, xvals, nranks) {
   size <- 20
 
   # Responsive labels (right side)
-  maxranks <- sapply(unique(df$yod), \(x) {
-    length(unique(df$cod_rankable[df$yod == x]))
-  }) |>
-    max(na.rm = TRUE)
+  addranks <- nranks - 10
 
-  incr <- 10 / (maxranks - 10)
+  label_size <- (size - .35 * addranks) / 3
 
-  addranks <- ifelse(nranks > 10, nranks - 10, 0)
-
-  addranks <- ifelse(nranks > maxranks, maxranks - 10, addranks)
-
-  label_size <- (size - incr * addranks) / 3
-
-  incr <- 30 / (maxranks - 10)
-
-  label_wrap <- ceiling((30 + incr * addranks))
+  label_wrap <- ceiling((30 + addranks))
 
   # Responsive lines and points
   line_size <- 6; pt_size1 <- 10; pt_size2 <- 4
@@ -283,6 +272,13 @@ cod_bump_chart <- function(df, xvals, nranks) {
   if (nranks > 20) {
     line_size <- 4; pt_size1 <- 6; pt_size2 <- 2
   }
+
+  # Text
+  title <- "Leading causes of death in Kansas City, MO"
+
+  note <- paste(
+    "**Note:** Labels on the right side of the plot name the rankable causes of death (CODs) and the number of deaths in that category for the final year displayed. Tied counts are ranked by their first appearance in the data and are denoted by an asterisk (*). Labels over points in the plot name rankable CODs that are not in the top ranked CODs in the final year displayed."
+  )
 
   # Plot
   df |>
@@ -292,6 +288,11 @@ cod_bump_chart <- function(df, xvals, nranks) {
       color = colors,
       group = cod_rankable
     )) +
+    geom_linerange(
+      aes(xmin = min(yod), xmax = max(yod), y = yrank),
+      linewidth = .5,
+      color = "#ccc"
+    ) +
     ggbump::geom_bump(
       linewidth = line_size,
       smooth = 8
@@ -336,10 +337,8 @@ cod_bump_chart <- function(df, xvals, nranks) {
     labs(
       x = "Year",
       y = "Rank",
-      caption = paste(
-        "**Note:** Tied counts are ranked by their first appearance",
-        "in the data and are denoted by an asterisk (*)."
-      )
+      title = title,
+      caption = note
     ) +
     theme_minimal(base_size = size) +
     theme(
@@ -352,12 +351,15 @@ cod_bump_chart <- function(df, xvals, nranks) {
         margin = margin(r = 10)
       ),
       panel.grid = element_blank(),
-      plot.caption = element_markdown(
+      plot.caption = element_textbox_simple(
         color = "#555",
         size = 14,
-        hjust = 0
+        hjust = 0,
+        margin = margin(t = 10, b = 5)
       ),
-      margins = margin(r = 0)
+      plot.title.position = "plot",
+      plot.caption.position = "plot",
+      margins = margin(b = 0)
     )
 }
 

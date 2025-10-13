@@ -21,8 +21,8 @@ source("scripts/setup.R")
 ```{r}
 sliderInput(
   inputId = "nranks",
-  label = "Number of ranks",
-  min = 1,
+  label = "Ranks",
+  min = 10,
   max = length(cod),
   value = 10,
   step = 1
