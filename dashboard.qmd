@@ -16,11 +16,11 @@ source("scripts/setup.R")
 
 # {.sidebar}
 
-## Axis ranges
+## Axis filters
 
 ```{r}
 sliderInput(
-  inputId = "nranks",
+  inputId = "ranks",
   label = "Ranks",
   min = 10,
   max = length(cod),
@@ -31,12 +31,9 @@ sliderInput(
 sliderInput(
   inputId = "years",
   label = "Years",
-  min = min(vrd$yod, na.rm = TRUE),
-  max = max(vrd$yod, na.rm = TRUE),
-  value = c(
-    min(vrd$yod, na.rm = TRUE),
-    max(vrd$yod, na.rm = TRUE)
-  ),
+  min = yrsrng[1],
+  max = yrsrng[2],
+  value = yrsrng,
   step = 1,
   sep = ""
 )
@@ -82,6 +79,15 @@ selectInput(
 )
 ```
 
+## Reset
+
+```{r}
+actionButton(
+  inputId = "reset",
+  label = "Reset filters"
+)
+```
+
 # Plot
 
 ```{r}
@@ -92,17 +98,7 @@ plotOutput("plot")
 #| context: server
 
 vrd2 <- reactive({
-  req(
-    input$years,
-    input$age,
-    input$sex,
-    input$race,
-    input$hispanic,
-    input$education,
-    input$pregnancy
-  )
-  
-  config_vrd(
+  df <- config_vrd(
     vrd,
     years_input = input$years,
     age_input = unlist(strsplit(input$age, ";")),
@@ -113,12 +109,25 @@ vrd2 <- reactive({
     pregnancy_input = input$pregnancy,
     palette = cod_colors
   )
+  
+  validate(need(df, "There are no records matching the selection criteria"))
+  
+  df
 })
 
 output$plot <- renderPlot({
-  req(vrd2(), input$years, input$nranks)
-  
-  cod_bump_chart(vrd2(), input$years, input$nranks)
+  cod_bump_chart(vrd2(), input$years, input$ranks)
+})
+
+observeEvent(input$reset, {
+  updateNumericInput(session, "ranks", value = 10)
+  updateNumericInput(session, "years", value = yrsrng)
+  updateNumericInput(session, "age", value = agelist[[1]])
+  updateNumericInput(session, "sex", value = sexlist[[1]])
+  updateNumericInput(session, "race", value = racelist[[1]])
+  updateNumericInput(session, "hispanic", value = hispaniclist[[1]])
+  updateNumericInput(session, "education", value = edlist[[1]])
+  updateNumericInput(session, "pregnancy", value = preglist[[1]])
 })
 ```
 

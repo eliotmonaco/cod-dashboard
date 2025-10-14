@@ -190,9 +190,14 @@ config_vrd <- function(
       filter(pregnancy == pregnancy_input)
   }
 
+  # If filters result in empty dataframe, return NULL
+  if (nrow(df) == 0) {
+    return(NULL)
+  }
+
   df <- df |>
     group_by(yod, cod_rankable) |>
-    summarize(n = n()) |>
+    summarize(n = n(), .groups = "keep") |>
     ungroup() |>
     drop_na(cod_rankable)
 
@@ -260,21 +265,28 @@ cod_bump_chart <- function(df, xvals, nranks) {
   size <- 20
 
   # Responsive labels (right side)
-  addranks <- nranks - 10
+  maxranks <- sapply(unique(df$yod), \(x) {
+    length(unique(df$cod_rankable[df$yod == x]))
+  }) |>
+    max(na.rm = TRUE)
+
+  addranks <- case_when(
+    maxranks < 10 ~ 0,
+    all(maxranks < nranks & maxranks > 10) ~ maxranks - 10,
+    .default = nranks - 10
+  )
 
   label_size <- (size - .35 * addranks) / 3
-
-  label_wrap <- ceiling((30 + addranks))
 
   # Responsive lines and points
   line_size <- 6; pt_size1 <- 10; pt_size2 <- 4
 
-  if (nranks > 20) {
+  if (addranks > 10) {
     line_size <- 4; pt_size1 <- 6; pt_size2 <- 2
   }
 
   # Text
-  title <- "Leading causes of death in Kansas City, MO"
+  title <- "Ranked leading causes of death in Kansas City, MO"
 
   note <- paste(
     "**Note:** Labels on the right side of the plot name the rankable causes of death (CODs) and the number of deaths in that category for the final year displayed. Tied counts are ranked by their first appearance in the data and are denoted by an asterisk (*). Labels over points in the plot name rankable CODs that are not in the top ranked CODs in the final year displayed."
@@ -290,7 +302,7 @@ cod_bump_chart <- function(df, xvals, nranks) {
     )) +
     geom_linerange(
       aes(xmin = min(yod), xmax = max(yod), y = yrank),
-      linewidth = .5,
+      linewidth = .25,
       color = "#ccc"
     ) +
     ggbump::geom_bump(
@@ -299,14 +311,17 @@ cod_bump_chart <- function(df, xvals, nranks) {
     ) +
     geom_point(size = pt_size1) +
     geom_point(size = pt_size2, color = "white") +
-    geom_text( # right side labels
-      aes(label = str_wrap(label, label_wrap)),
+    geom_textbox( # right side labels
+      aes(label = label),
       size = label_size,
+      width = unit(xexp / length(xbrk), "npc"),
       lineheight = .8,
       fontface = "bold",
       data = dflabr,
       x = xvals[2] + .25,
-      hjust = 0
+      hjust = 0,
+      box.color = NA,
+      fill = NA
     ) +
     ggrepel::geom_label_repel( # plot labels
       aes(label = str_wrap(cod_rankable, 30)),
@@ -331,7 +346,7 @@ cod_bump_chart <- function(df, xvals, nranks) {
     scale_y_continuous(
       breaks = yseq$yrank,
       labels = yseq$rank,
-      expand = expansion(mult = c(.05 - .002 * addranks, .025))
+      expand = expansion(mult = c(.05 - .002 * addranks, .05))
     ) +
     scale_color_identity() +
     labs(
@@ -359,7 +374,7 @@ cod_bump_chart <- function(df, xvals, nranks) {
       ),
       plot.title.position = "plot",
       plot.caption.position = "plot",
-      margins = margin(b = 0)
+      margins = margin()
     )
 }
 

@@ -1,4 +1,3 @@
-library(shinyWidgets)
 library(tidyverse)
 library(ggtext)
 
@@ -9,6 +8,13 @@ cod <- readRDS("data/cod_rankable.rds")
 cod_colors <- readRDS("data/cod_colors.rds")
 
 # Selector lists for Shiny inputs
+
+## Years
+
+yrsrng <- c(
+  min(vrd$yod, na.rm = TRUE),
+  max(vrd$yod, na.rm = TRUE)
+)
 
 ## Age
 

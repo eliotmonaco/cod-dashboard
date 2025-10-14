@@ -13,10 +13,16 @@ $bslib-sidebar-bg: $syn-lightblue !default;
   margin-top: 0;
 }
 
-.irs--shiny.irs-with-grid, .shiny-input-select {
+.irs--shiny.irs-with-grid, .shiny-input-select, .action-button {
   margin: 0 10px;
 }
 
 /* .form-group.shiny-input-container > .control-label {
   font-weight: bold;
 } */
+
+.shiny-output-error {
+  display: grid;
+  justify-content: center;
+}
+
