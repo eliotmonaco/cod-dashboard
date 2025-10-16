@@ -1,5 +1,6 @@
 library(tidyverse)
 library(ggtext)
+library(reactable)
 
 source("scripts/fn.R")
 

@@ -1,4 +1,4 @@
-# Function to turn strings into ICD code sequences
+# Turn strings from icd-rankable-raw.xlsx into ICD code sequences
 get_icd_seq <- function(x) {
   x2 <- unlist(strsplit(x, ",\\s?")) # split on comma
 
@@ -84,6 +84,7 @@ get_icd_seq <- function(x) {
   unlist(x2)
 }
 
+# Fix problems in VR ICD code variables
 fix_vital_icd <- function(df, row_id) {
   # Check uniqueness of row ID variable
   if (any(duplicated(df[[row_id]]))) {
@@ -134,7 +135,37 @@ fix_vital_icd <- function(df, row_id) {
     dplyr::rows_update(df2, by = row_id)
 }
 
-match_icd <- function(x, ls) {
+# Match CDC ICD categories to dataset
+match_cdc_icd <- function(df, icd) {
+  requireNamespace("dplyr")
+
+  icd <- icd |>
+    filter(!grepl("(?i)^deleted|^mc only", status)) |>
+    mutate(code = gsub("[[:punct:]]", "", code)) |>
+    select(-status)
+
+  cod1 <- df |>
+    select(rowid, cod) |>
+    left_join(icd, by = c("cod" = "code"))
+
+  cod2 <- cod1 |>
+    filter(is.na(icd_title)) |>
+    select(-icd_title) |>
+    mutate(cod = substr(cod, 1, 3)) |>
+    left_join(icd, by = c("cod" = "code"))
+
+  cod_full <- cod1 |>
+    drop_na(icd_title) |>
+    bind_rows(cod2) |>
+    rename(cod_matched_icd = cod)
+
+  df |>
+    left_join(cod_full, by = "rowid") |>
+    relocate(cod_matched_icd, icd_title, .after = cod)
+}
+
+# Match rankable ICD categories to dataset
+match_rankable_icd <- function(x, ls) {
   cod <- purrr::imap(ls, \(p, i) {
     if (grepl(p, x)) {
       i
@@ -150,7 +181,8 @@ match_icd <- function(x, ls) {
   }
 }
 
-config_vrd <- function(
+# Filter VR dataset based on Shiny inputs
+filter_vrd <- function(
     df,
     years_input,
     age_input,
@@ -159,8 +191,7 @@ config_vrd <- function(
     hispanic_input,
     education_input,
     pregnancy_input,
-    district_input,
-    palette) {
+    district_input) {
   requireNamespace("tidyverse")
 
   df <- df |>
@@ -171,7 +202,7 @@ config_vrd <- function(
 
   if (age_input != "all") {
     df <- df |>
-      filter(age == age_input)
+      filter(age %in% unlist(strsplit(age_input, ";")))
   }
 
   if (sex_input != "all") {
@@ -209,6 +240,11 @@ config_vrd <- function(
     return(NULL)
   }
 
+  df
+}
+
+# Configure filtered dataset for plot display
+config_bump_data <- function(df, colors) {
   df <- df |>
     group_by(yod, cod_rankable) |>
     summarize(n = n(), .groups = "keep") |>
@@ -227,9 +263,10 @@ config_vrd <- function(
   })
 
   list_rbind(ls) |>
-    left_join(palette, by = c("cod_rankable" = "cod"))
+    left_join(colors, by = c("cod_rankable" = "cod"))
 }
 
+# Plot bump chart
 cod_bump_chart <- function(df, xvals, nranks) {
   requireNamespace("tidyverse")
   requireNamespace("ggtext")
@@ -389,6 +426,38 @@ cod_bump_chart <- function(df, xvals, nranks) {
       plot.title.position = "plot",
       plot.caption.position = "plot",
       margins = margin()
+    )
+}
+
+# Summarize filtered dataset by rankable COD for table display
+rankable_cod_summary <- function(df, cod_name, cod_list) {
+  requireNamespace("dplyr")
+
+  p <- paste0("(?i)", cod_name)
+
+  nm <- names(cod_list)[grepl(p, names(cod_list))]
+
+  if (length(nm) == 0) {
+    stop("No rankable COD found")
+  } else if (length(nm) > 1) {
+    stop("More than one rankable COD found")
+  }
+
+  df |>
+    filter(cod_rankable == nm) |>
+    group_by(icd_title) |>
+    summarize(n = n()) |>
+    arrange(desc(n)) |>
+    rename("Cause of death" = icd_title, Count = n)
+}
+
+# Create table
+cod_table <- function(df) {
+  df |>
+    reactable(
+      filterable = TRUE,
+      searchable = TRUE,
+      pagination = FALSE
     )
 }
 

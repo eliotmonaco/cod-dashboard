@@ -5,19 +5,22 @@ source("scripts/setup.R")
 
 yrs <- c(2014, 2023)
 
-df <- config_vrd(
+df <- filter_vrd(
   vrd,
   years_input = yrs,
-  age_input = unlist(strsplit(agelist[[2]], ";")),
-  sex_input = unlist(strsplit(sexlist[[1]], ";")),
-  # sex_input = "F",
+  age_input = agelist[[1]],
+  sex_input = sexlist[[1]],
   race_input = racelist[[1]],
   hispanic_input = hispaniclist[[1]],
   education_input = edlist[[1]],
-  pregnancy_input = preglist[[3]],
-  palette = cod_colors
+  pregnancy_input = preglist[[1]],
+  district_input = distlist[[1]]
 )
 
 df |>
-  cod_bump_chart(xvals = yrs, nranks = 30)
+  config_bump_data(colors = cod_colors) |>
+  cod_bump_chart(xvals = yrs, nranks = 10)
 
+df |>
+  rankable_cod_summary(cod_name = "accidents", cod_list = cod) |>
+  cod_table()

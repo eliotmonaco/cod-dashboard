@@ -104,21 +104,46 @@ actionButton(
 plotOutput("plot")
 ```
 
+# Tables
+
+Cause of death (COD) counts for the top X overall rankable CODs.
+
+::: {.panel-tabset}
+
+## Heart disease
+
+```{r}
+reactableOutput("table1")
+```
+
+## Cancer
+
+```{r}
+reactableOutput("table2")
+```
+
+## Accidents
+
+```{r}
+reactableOutput("table3")
+```
+
+:::
+
 ```{r}
 #| context: server
 
-vrd2 <- reactive({
-  df <- config_vrd(
+data <- reactive({
+  df <- filter_vrd(
     vrd,
     years_input = input$years,
-    age_input = unlist(strsplit(input$age, ";")),
-    sex_input = unlist(strsplit(input$sex, ";")),
+    age_input = input$age,
+    sex_input = input$sex,
     race_input = input$race,
     hispanic_input = input$hispanic,
     education_input = input$education,
     pregnancy_input = input$pregnancy,
-    district_input = input$dist,
-    palette = cod_colors
+    district_input = input$dist
   )
   
   validate(need(df, "There are no records matching the selection criteria"))
@@ -127,7 +152,36 @@ vrd2 <- reactive({
 })
 
 output$plot <- renderPlot({
-  cod_bump_chart(vrd2(), input$years, input$ranks)
+  data() |>
+    config_bump_data(colors = cod_colors) |>
+    cod_bump_chart(xvals = input$years, nranks = input$ranks)
+})
+
+output$table1 <- renderReactable({
+  data() |>
+    rankable_cod_summary(
+      cod_name = "heart",
+      cod_list = cod
+    ) |>
+    cod_table()
+})
+
+output$table2 <- renderReactable({
+  data() |>
+    rankable_cod_summary(
+      cod_name = "malignant neoplasm",
+      cod_list = cod
+    ) |>
+    cod_table()
+})
+
+output$table3 <- renderReactable({
+  data() |>
+    rankable_cod_summary(
+      cod_name = "accidents",
+      cod_list = cod
+    ) |>
+    cod_table()
 })
 
 observeEvent(input$reset, {
@@ -142,4 +196,6 @@ observeEvent(input$reset, {
   updateNumericInput(session, "dist", value = distlist[[1]])
 })
 ```
+
+
 

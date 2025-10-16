@@ -18,6 +18,16 @@ Import vital records deaths dataset.
 vrd <- readRDS("../data/vr_deaths_2014_2023.rds")
 ```
 
+Import CDC ICD code list.
+
+```{r}
+icd <- readxl::read_excel(
+  "../data/allvalid2023-detailed-titles-headings.xlsx",
+  skip = 6,
+  .name_repair = setmeup::fix_colnames
+)
+```
+
 Import list of rankable CODs.
 
 ```{r}
@@ -58,7 +68,7 @@ vrd |>
   filter(!grepl("^[[:upper:]]\\d{2,3}$", cod))
 ```
 
-Add council district variable.
+Add council district variable from council districts shapefile.
 
 ```{r}
 df <- vrd |>
@@ -86,7 +96,18 @@ vrd <- vrd |>
   )
 ```
 
-Assign rankable CODs to deaths dataset.
+Add COD title variable from CDC ICD-10 codes list.
+
+```{r}
+vrd <- match_cdc_icd(vrd, icd)
+```
+
+```{r}
+vrd |>
+  filter(is.na(icd_title))
+```
+
+Add rankable COD variable from NVSS list.
 
 ```{r}
 # Create regex patterns
@@ -95,13 +116,16 @@ cod <- lapply(cod, \(x) {
 })
 
 # Get rankable COD categories
-cod_ranked <- sapply(vrd$cod, match_icd, ls = cod)
+cod_ranked <- sapply(vrd$cod, match_rankable_icd, ls = cod)
 
 # Check if any ICD code was matched to > 1 COD
 any(sapply(cod_ranked, length) > 1)
 
 # Add to `vrd`
 vrd$cod_rankable <- cod_ranked
+
+vrd <- vrd |>
+  relocate(cod_rankable, .after = cod_matched_icd)
 ```
 
 # Create color palette
