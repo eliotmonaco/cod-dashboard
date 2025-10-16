@@ -89,8 +89,8 @@ vrd <- list_rbind(vrd)
 
 vrd[vrd == ""] <- NA
 
-# # Save to `data/1-source/`
-# nm <- paste0("vr_deaths_", min(yrs), "_", max(yrs), ".rds")
-#
-# saveRDS(vrd, paste0("data/", nm))
+# Save to `data/1-source/`
+nm <- paste0("vr_deaths_", min(yrs), "_", max(yrs), ".rds")
+
+saveRDS(vrd, paste0("data/", nm))
 

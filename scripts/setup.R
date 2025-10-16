@@ -3,7 +3,7 @@ library(ggtext)
 
 source("scripts/fn.R")
 
-vrd <- readRDS("data/vr_deaths_2014_2023.rds")
+vrd <- readRDS("data/vrd_db_dataset.rds")
 cod <- readRDS("data/cod_rankable.rds")
 cod_colors <- readRDS("data/cod_colors.rds")
 
@@ -35,14 +35,14 @@ for (i in 1:ngroups) {
 }
 
 agelist <- c(
-  list("All" = paste(0:maxage, collapse = ";")),
+  list("All" = "all"),
   agegroups
 )
 
 ## Sex
 
 sexlist <- list(
-  "All" = "F;M;U",
+  "All" = "all",
   "Female" = "F",
   "Male" = "M"
 )
@@ -87,7 +87,7 @@ names(racelist) <- c(
   "Other"
 )
 
-# Hispanic origin
+## Hispanic origin
 
 hispaniclist <- list(
   "all",
@@ -105,7 +105,7 @@ names(hispaniclist) <- c(
   "Other"
 )
 
-# Education level
+## Education level
 
 edlist <- as.list(as.character(1:9))
 
@@ -126,7 +126,7 @@ edlist <- c(
   edlist
 )
 
-# Pregnancy status
+## Pregnancy status
 
 preglist <- as.list(as.character(c(1:4, 7:9)))
 
@@ -143,5 +143,17 @@ names(preglist) <- c(
 preglist <- c(
   list("All" = "all"),
   preglist
+)
+
+## Council district
+
+distlist <- list(
+  "All" = "all",
+  "1st" = "1",
+  "2nd" = "2",
+  "3rd" = "3",
+  "4th" = "4",
+  "5th" = "5",
+  "6th" = "6"
 )
 

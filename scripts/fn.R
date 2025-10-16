@@ -159,16 +159,25 @@ config_vrd <- function(
     hispanic_input,
     education_input,
     pregnancy_input,
+    district_input,
     palette) {
   requireNamespace("tidyverse")
 
   df <- df |>
     filter(
-      age %in% age_input,
       yod >= years_input[1],
-      yod <= years_input[2],
-      sex %in% sex_input
+      yod <= years_input[2]
     )
+
+  if (age_input != "all") {
+    df <- df |>
+      filter(age == age_input)
+  }
+
+  if (sex_input != "all") {
+    df <- df |>
+      filter(sex == sex_input)
+  }
 
   if (race_input != "all") {
     df <- df |>
@@ -188,6 +197,11 @@ config_vrd <- function(
   if (pregnancy_input != "all") {
     df <- df |>
       filter(pregnancy == pregnancy_input)
+  }
+
+  if (district_input != "all") {
+    df <- df |>
+      filter(council_district == district_input)
   }
 
   # If filters result in empty dataframe, return NULL

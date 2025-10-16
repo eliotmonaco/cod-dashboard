@@ -3,10 +3,19 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-```{r}
+# Setup and import data
+
+```{r message=FALSE}
 library(tidyverse)
+library(sf)
 
 source("fn.R")
+```
+
+Import vital records deaths dataset.
+
+```{r}
+vrd <- readRDS("../data/vr_deaths_2014_2023.rds")
 ```
 
 Import list of rankable CODs.
@@ -15,11 +24,17 @@ Import list of rankable CODs.
 cod <- readRDS("../data/cod_rankable.rds")
 ```
 
-Source and compile vital records deaths files.
+Import city council districts shapefile (2023).
 
 ```{r}
-source("get-deaths.R")
+dir <- "City Council Districts Shapefile - Effective 2023_20251016"
+
+f <- list.files(paste0("../data/", dir), ".shp$", full.names = TRUE)
+
+dist <- st_read(f)
 ```
+
+# Configure VR data
 
 Configure deaths dataset.
 
@@ -43,6 +58,34 @@ vrd |>
   filter(!grepl("^[[:upper:]]\\d{2,3}$", cod))
 ```
 
+Add council district variable.
+
+```{r}
+df <- vrd |>
+  select(rowid, reslon, reslat) |>
+  drop_na(reslon, reslat) |>
+  st_as_sf(coords = c("reslon", "reslat"))
+```
+
+```{r}
+st_crs(df) <- st_crs(dist)
+
+df <- df |>
+  st_join(
+    dist |>
+      select(council_district = dist_id)
+  )
+```
+
+```{r}
+vrd <- vrd |>
+  left_join(
+    as.data.frame(df) |>
+      select(-geometry),
+    by = "rowid"
+  )
+```
+
 Assign rankable CODs to deaths dataset.
 
 ```{r}
@@ -60,6 +103,8 @@ any(sapply(cod_ranked, length) > 1)
 # Add to `vrd`
 vrd$cod_rankable <- cod_ranked
 ```
+
+# Create color palette
 
 Assign color palette to rankable CODs.
 
@@ -105,10 +150,10 @@ cod_colors |>
   )
 ```
 
-Save.
+# Save
 
 ```{r}
-saveRDS(vrd, "../data/vr_deaths_2014_2023.rds")
+saveRDS(vrd, "../data/vrd_db_dataset.rds")
 saveRDS(cod_colors, "../data/cod_colors.rds")
 ```
 

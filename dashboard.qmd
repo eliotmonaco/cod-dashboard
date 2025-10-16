@@ -79,6 +79,16 @@ selectInput(
 )
 ```
 
+## Geographic filters
+
+```{r}
+selectInput(
+  inputId = "dist",
+  label = "Council district",
+  choices = distlist
+)
+```
+
 ## Reset
 
 ```{r}
@@ -107,6 +117,7 @@ vrd2 <- reactive({
     hispanic_input = input$hispanic,
     education_input = input$education,
     pregnancy_input = input$pregnancy,
+    district_input = input$dist,
     palette = cod_colors
   )
   
@@ -128,6 +139,7 @@ observeEvent(input$reset, {
   updateNumericInput(session, "hispanic", value = hispaniclist[[1]])
   updateNumericInput(session, "education", value = edlist[[1]])
   updateNumericInput(session, "pregnancy", value = preglist[[1]])
+  updateNumericInput(session, "dist", value = distlist[[1]])
 })
 ```
 
