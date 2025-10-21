@@ -17,6 +17,18 @@ $bslib-sidebar-bg: $syn-lightblue !default;
   margin: 0 10px;
 }
 
+#cod.shiny-input-select, #cod.shiny-input-select + .shiny-input-select {
+  min-width: 20em;
+}
+
+#cod.shiny-input-select + .shiny-input-select > .selectize-input > .item {
+ margin-right: 20px;
+}
+
+#cod.shiny-input-select + .selectize-control.single .selectize-input:not(.no-arrow)::after {
+  right: 10px;
+}
+
 /* .form-group.shiny-input-container > .control-label {
   font-weight: bold;
 } */

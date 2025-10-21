@@ -98,37 +98,29 @@ actionButton(
 )
 ```
 
-# Plot
+# Leading CODs
 
 ```{r}
 plotOutput("plot")
 ```
 
-# Tables
+# COD category breakdown
 
-Cause of death (COD) counts for the top X overall rankable CODs.
-
-::: {.panel-tabset}
-
-## Heart disease
+## {.toolbar}
 
 ```{r}
-reactableOutput("table1")
+selectInput(
+  inputId = "cod",
+  label = "Cause of death category",
+  choices = sort(names(cod))
+)
 ```
 
-## Cancer
+## Table
 
 ```{r}
-reactableOutput("table2")
+DTOutput("table")
 ```
-
-## Accidents
-
-```{r}
-reactableOutput("table3")
-```
-
-:::
 
 ```{r}
 #| context: server
@@ -157,31 +149,17 @@ output$plot <- renderPlot({
     cod_bump_chart(xvals = input$years, nranks = input$ranks)
 })
 
-output$table1 <- renderReactable({
+output$table <- renderDT({
   data() |>
     rankable_cod_summary(
-      cod_name = "heart",
+      year = input$years[2],
+      cod_name = input$cod,
       cod_list = cod
     ) |>
-    cod_table()
-})
-
-output$table2 <- renderReactable({
-  data() |>
-    rankable_cod_summary(
-      cod_name = "malignant neoplasm",
-      cod_list = cod
-    ) |>
-    cod_table()
-})
-
-output$table3 <- renderReactable({
-  data() |>
-    rankable_cod_summary(
-      cod_name = "accidents",
-      cod_list = cod
-    ) |>
-    cod_table()
+    cod_table(
+      year = input$years[2],
+      cod_name = input$cod
+    )
 })
 
 observeEvent(input$reset, {

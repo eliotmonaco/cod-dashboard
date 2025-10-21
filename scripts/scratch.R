@@ -1,6 +1,4 @@
 
-library(tidyverse)
-
 source("scripts/setup.R")
 
 yrs <- c(2014, 2023)
@@ -17,10 +15,13 @@ df <- filter_vrd(
   district_input = distlist[[1]]
 )
 
-df |>
-  config_bump_data(colors = cod_colors) |>
-  cod_bump_chart(xvals = yrs, nranks = 10)
+# df |>
+#   config_bump_data(colors = cod_colors) |>
+#   cod_bump_chart(xvals = yrs, nranks = 10)
 
-df |>
-  rankable_cod_summary(cod_name = "accidents", cod_list = cod) |>
-  cod_table()
+df <- df |>
+  rankable_cod_summary(
+    cod_name = names(cod)[47],
+    cod_list = cod
+  )
+

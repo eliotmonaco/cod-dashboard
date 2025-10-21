@@ -73,6 +73,23 @@ for (i in 1:nrow(icd)) {
   }
 }
 
+# Correct rows with codes containing "l"
+p <- "l"
+
+for (i in 1:nrow(icd)) {
+  s <- icd[i, "code", drop = TRUE]
+
+  if (grepl(p, s)) {
+    print(s)
+
+    s <- gsub(p, "1", s)
+
+    icd[i, "code"] <- s
+
+    print(s)
+  }
+}
+
 # Get all sequences from `icd`
 codes <- lapply(icd$code, get_icd_seq)
 
@@ -81,7 +98,7 @@ r <- which(grepl("#", icd$name))
 
 cod_rankable <- codes[r]
 
-names(cod_rankable) <- sub("^(\\d{1,3})?#\\s", "", icd$name[r])
+names(cod_rankable) <- str_squish(sub("^(\\d{1,3})?#\\s", "", icd$name[r]))
 
 saveRDS(cod_rankable, "data/cod_rankable.rds")
 

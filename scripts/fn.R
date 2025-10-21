@@ -137,8 +137,6 @@ fix_vital_icd <- function(df, row_id) {
 
 # Match CDC ICD categories to dataset
 match_cdc_icd <- function(df, icd) {
-  requireNamespace("dplyr")
-
   icd <- icd |>
     filter(!grepl("(?i)^deleted|^mc only", status)) |>
     mutate(code = gsub("[[:punct:]]", "", code)) |>
@@ -192,8 +190,6 @@ filter_vrd <- function(
     education_input,
     pregnancy_input,
     district_input) {
-  requireNamespace("tidyverse")
-
   df <- df |>
     filter(
       yod >= years_input[1],
@@ -266,11 +262,8 @@ config_bump_data <- function(df, colors) {
     left_join(colors, by = c("cod_rankable" = "cod"))
 }
 
-# Plot bump chart
+# Leading COD bump chart
 cod_bump_chart <- function(df, xvals, nranks) {
-  requireNamespace("tidyverse")
-  requireNamespace("ggtext")
-
   # x-axis scale
   xseq <- xvals[1]:xvals[2]
 
@@ -424,40 +417,46 @@ cod_bump_chart <- function(df, xvals, nranks) {
         margin = margin(t = 10, b = 5)
       ),
       plot.title.position = "plot",
-      plot.caption.position = "plot",
-      margins = margin()
+      plot.caption.position = "plot"
     )
 }
 
 # Summarize filtered dataset by rankable COD for table display
-rankable_cod_summary <- function(df, cod_name, cod_list) {
-  requireNamespace("dplyr")
-
-  p <- paste0("(?i)", cod_name)
-
-  nm <- names(cod_list)[grepl(p, names(cod_list))]
-
-  if (length(nm) == 0) {
-    stop("No rankable COD found")
-  } else if (length(nm) > 1) {
-    stop("More than one rankable COD found")
-  }
-
+rankable_cod_summary <- function(df, year, cod_name, cod_list) {
   df |>
-    filter(cod_rankable == nm) |>
+    filter(
+      cod_rankable == cod_name,
+      yod == year
+    ) |>
     group_by(icd_title) |>
     summarize(n = n()) |>
-    arrange(desc(n)) |>
-    rename("Cause of death" = icd_title, Count = n)
+    arrange(desc(n))
 }
 
 # Create table
-cod_table <- function(df) {
+cod_table <- function(df, year, cod_name) {
+  title <- paste0(cod_name, ", ", year)
+
   df |>
-    reactable(
-      filterable = TRUE,
-      searchable = TRUE,
-      pagination = FALSE
+    datatable(
+      colnames = c(
+        "Cause of death" = "icd_title",
+        "Count" = "n"
+      ),
+      filter = "top",
+      caption = htmltools::tags$caption(
+        style = "
+          caption-side: top;
+          text-align: left;
+          color: black;
+          font-size: 150%;
+        ",
+        title
+      ),
+      options = list(
+        dom = "t",
+        paging = FALSE
+      )
     )
 }
 
