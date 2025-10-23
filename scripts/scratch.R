@@ -3,6 +3,7 @@ source("scripts/setup.R")
 
 yrs <- c(2014, 2023)
 
+# Configure `vrd` based on Shiny inputs
 df <- filter_vrd(
   vrd,
   years_input = yrs,
@@ -15,13 +16,40 @@ df <- filter_vrd(
   district_input = distlist[[1]]
 )
 
-# df |>
-#   config_bump_data(colors = cod_colors) |>
-#   cod_bump_chart(xvals = yrs, nranks = 10)
+# Leading COD bump chart
+df |>
+  config_bump_data(colors = cod_colors) |>
+  cod_bump_chart(xvals = yrs, nranks = 10)
 
-df <- df |>
+# COD breakdown table
+dftbl <- df |>
   rankable_cod_summary(
+    year = yrs[2],
     cod_name = names(cod)[47],
     cod_list = cod
   )
+
+dftbl |>
+  cod_table(
+    year = yrs[2],
+    cod_name = names(cod)[47]
+  )
+
+# Annual deaths plots
+plot_ann_deaths(
+  annual_deaths |>
+    select(year, "Deaths" = n, "Rankable deaths" = n_rankable),
+  type = "n"
+)
+
+plot_ann_deaths(
+  annual_deaths |>
+    select(year, "Deaths" = pct, "Rankable deaths" = pct_rankable),
+  type = "pct"
+)
+
+
+
+
+# How much does each COD contribute to the total deaths per year as a percentage?
 

@@ -98,20 +98,34 @@ actionButton(
 )
 ```
 
-# Leading CODs
+# Overview
+
+## Row
 
 ```{r}
-plotOutput("plot")
+highchartOutput("ann1")
 ```
 
-# COD category breakdown
+## Row
+
+```{r}
+highchartOutput("ann2")
+```
+
+# Leading causes
+
+```{r}
+plotOutput("bump")
+```
+
+# Cause breakdown
 
 ## {.toolbar}
 
 ```{r}
 selectInput(
   inputId = "cod",
-  label = "Cause of death category",
+  label = "Rankable COD category",
   choices = sort(names(cod))
 )
 ```
@@ -143,12 +157,14 @@ data <- reactive({
   df
 })
 
-output$plot <- renderPlot({
+# Leading COD bump chart
+output$bump <- renderPlot({
   data() |>
     config_bump_data(colors = cod_colors) |>
     cod_bump_chart(xvals = input$years, nranks = input$ranks)
 })
 
+# COD breakdown table
 output$table <- renderDT({
   data() |>
     rankable_cod_summary(
@@ -162,6 +178,7 @@ output$table <- renderDT({
     )
 })
 
+# Reset button
 observeEvent(input$reset, {
   updateNumericInput(session, "ranks", value = 10)
   updateNumericInput(session, "years", value = yrsrng)
@@ -172,6 +189,23 @@ observeEvent(input$reset, {
   updateNumericInput(session, "education", value = edlist[[1]])
   updateNumericInput(session, "pregnancy", value = preglist[[1]])
   updateNumericInput(session, "dist", value = distlist[[1]])
+})
+
+# Annual deaths plots
+output$ann1 <- renderHighchart({
+  plot_ann_deaths(
+    annual_deaths |>
+      select(year, "Deaths" = n, "Rankable deaths" = n_rankable),
+    type = "n"
+  )
+})
+
+output$ann2 <- renderHighchart({
+  plot_ann_deaths(
+    annual_deaths |>
+      select(year, "Deaths" = pct, "Rankable deaths" = pct_rankable),
+    type = "pct"
+  )
 })
 ```
 

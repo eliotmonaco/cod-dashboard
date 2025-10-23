@@ -1,6 +1,9 @@
 library(tidyverse)
+library(kcData)
+library(setmeup)
 library(ggtext)
 library(DT)
+library(highcharter)
 
 source("scripts/fn.R")
 
@@ -8,7 +11,8 @@ vrd <- readRDS("data/vrd_db_dataset.rds")
 cod <- readRDS("data/cod_rankable.rds")
 cod_colors <- readRDS("data/cod_colors.rds")
 
-# Selector lists for Shiny inputs
+
+# Lists for Shiny inputs --------------------------------------------------
 
 ## Years
 
@@ -157,4 +161,24 @@ distlist <- list(
   "5th" = "5",
   "6th" = "6"
 )
+
+# Overview table ----------------------------------------------------------
+
+popest <- return_popest_table(2014:2023)
+
+annual_deaths <- vrd |>
+  group_by(yod) |>
+  summarize(
+    n = n(),
+    n_rankable = sum(!is.na(cod_rankable))
+  ) |>
+  left_join(popest, by = c("yod" = "year")) |>
+  rename(
+    year = yod,
+    pop_est = estimate
+  ) |>
+  mutate(
+    pct = pct(n, pop_est, 2),
+    pct_rankable = pct(n_rankable, pop_est, 2)
+  )
 

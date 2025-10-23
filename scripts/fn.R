@@ -262,7 +262,7 @@ config_bump_data <- function(df, colors) {
     left_join(colors, by = c("cod_rankable" = "cod"))
 }
 
-# Leading COD bump chart
+# Create leading COD bump chart
 cod_bump_chart <- function(df, xvals, nranks) {
   # x-axis scale
   xseq <- xvals[1]:xvals[2]
@@ -433,7 +433,7 @@ rankable_cod_summary <- function(df, year, cod_name, cod_list) {
     arrange(desc(n))
 }
 
-# Create table
+# Create COD breakdown table
 cod_table <- function(df, year, cod_name) {
   title <- paste0(cod_name, ", ", year)
 
@@ -458,5 +458,86 @@ cod_table <- function(df, year, cod_name) {
         paging = FALSE
       )
     )
+}
+
+# Plot annual deaths
+plot_ann_deaths <- function(df, type = c("n", "pct")) {
+  df <- df |>
+    pivot_longer(
+      cols = !year,
+      names_to = "type",
+      values_to = "n"
+    )
+
+  fontsize1 <- "1.2em !important"
+  fontsize2 <- "1em !important"
+
+  p <- df |>
+    hchart("column", hcaes(
+      x = factor(year),
+      y = n,
+      group = type
+    )) |>
+    hc_xAxis(
+      title = list(
+        text = "Year",
+        style = list(fontSize = fontsize1)
+      ),
+      labels = list(
+        style = list(fontSize = fontsize2)
+      )
+    ) |>
+    hc_legend(itemStyle = list(fontSize = fontsize1))
+
+  if (type == "n") {
+    jsfn <- JS(
+      "function() {
+        const num = this.y;
+        return num.toLocaleString('en-US');
+      }"
+    )
+
+    p |>
+      hc_yAxis(
+        title = list(
+          text = "Count",
+          style = list(fontSize = fontsize1)
+        ),
+        labels = list(
+          style = list(fontSize = fontsize2)
+        )
+      ) |>
+      hc_tooltip(formatter = jsfn) |>
+      hc_title(
+        text = "Annual deaths in Kansas City, MO",
+        align = "left"
+      )
+  } else if (type == "pct") {
+    jsfn <- JS(
+      "function() {
+        const num = this.y;
+        return num.toLocaleString('en-US') + '%';
+      }"
+    )
+
+    p |>
+      hc_yAxis(
+        title = list(
+          text = "Percentage of Kansas City population",
+          style = list(fontSize = fontsize1)
+        ),
+        labels = list(
+          style = list(fontSize = fontsize2)
+        )
+      ) |>
+      hc_tooltip(formatter = jsfn) |>
+      hc_title(
+        text = paste(
+          "Annual deaths in Kansas City, MO,",
+          "as a percentage of population"
+        ),
+        align = "left"
+      )
+  }
 }
 
