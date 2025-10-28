@@ -1,11 +1,12 @@
 
 source("scripts/setup.R")
 
-yrs <- c(2014, 2023)
+yrs <- c(2014, 2024)
 
 # Configure `vrd` based on Shiny inputs
 df <- filter_vrd(
   vrd,
+  cod_set = catlist[[2]],
   years_input = yrs,
   age_input = agelist[[1]],
   sex_input = sexlist[[1]],
@@ -25,14 +26,14 @@ df |>
 dftbl <- df |>
   rankable_cod_summary(
     year = yrs[2],
-    cod_name = names(cod)[47],
-    cod_list = cod
+    cod_name = names(cod_mod)[52],
+    cod_list = cod_mod
   )
 
 dftbl |>
   cod_table(
     year = yrs[2],
-    cod_name = names(cod)[47]
+    cod_name = names(cod_mod)[52]
   )
 
 # Annual deaths plots

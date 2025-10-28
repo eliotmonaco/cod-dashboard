@@ -15,7 +15,7 @@ source("fn.R")
 Import vital records deaths dataset.
 
 ```{r}
-vrd <- readRDS("../data/vr_deaths_2014_2023.rds")
+vrd <- readRDS("../data/vr_deaths_2014_2024.rds")
 ```
 
 Import CDC ICD code list.
@@ -31,7 +31,8 @@ icd <- readxl::read_excel(
 Import list of rankable CODs.
 
 ```{r}
-cod <- readRDS("../data/cod_rankable.rds")
+cod_cdc <- readRDS("../data/cod_rankable_cdc.rds")
+cod_mod <- readRDS("../data/cod_rankable_mod.rds")
 ```
 
 Import city council districts shapefile (2023).
@@ -111,21 +112,42 @@ Add rankable COD variable from NVSS list.
 
 ```{r}
 # Create regex patterns
-cod <- lapply(cod, \(x) {
+cod_cdc <- lapply(cod_cdc, \(x) {
   paste(paste0("^", sub("\\.", "", x)), collapse = "|")
 })
 
 # Get rankable COD categories
-cod_ranked <- sapply(vrd$cod, match_rankable_icd, ls = cod)
+cod_ranked_cdc <- sapply(vrd$cod, match_rankable_icd, ls = cod_cdc)
 
 # Check if any ICD code was matched to > 1 COD
-any(sapply(cod_ranked, length) > 1)
+any(sapply(cod_ranked_cdc, length) > 1)
 
 # Add to `vrd`
-vrd$cod_rankable <- cod_ranked
+vrd$cod_rankable_cdc <- cod_ranked_cdc
 
 vrd <- vrd |>
-  relocate(cod_rankable, .after = cod_matched_icd)
+  relocate(cod_rankable_cdc, .after = cod_matched_icd)
+```
+
+Add rankable COD variable based on NVSS list with accidental drug overdoses separated from other accidents.
+
+```{r}
+# Create regex patterns
+cod_mod <- lapply(cod_mod, \(x) {
+  paste(paste0("^", sub("\\.", "", x)), collapse = "|")
+})
+
+# Get rankable COD categories
+cod_ranked_mod <- sapply(vrd$cod, match_rankable_icd, ls = cod_mod)
+
+# Check if any ICD code was matched to > 1 COD
+any(sapply(cod_ranked_mod, length) > 1)
+
+# Add to `vrd`
+vrd$cod_rankable_mod <- cod_ranked_mod
+
+vrd <- vrd |>
+  relocate(cod_rankable_mod, .after = cod_rankable_cdc)
 ```
 
 # Create color palette
@@ -136,18 +158,33 @@ Assign color palette to rankable CODs.
 pal <- colorRampPalette(paletteer::paletteer_d("yarrr::basel"))
 
 cod_ranked <- vrd |>
-  count(cod_rankable) |>
+  count(cod_rankable_cdc) |>
+  rename(cod = cod_rankable_cdc) |>
+  bind_rows(
+    vrd |>
+      count(cod_rankable_mod) |>
+      rename(cod = cod_rankable_mod)
+  )
+
+cod_ranked <- cod_ranked |>
+  bind_rows(
+    tibble(
+      cod = names(cod_cdc)[!names(cod_cdc) %in% cod_ranked$cod],
+      n = 0
+    )
+  ) |>
+  distinct() |>
   arrange(desc(n)) |>
-  drop_na(cod_rankable) |>
-  pull(cod_rankable)
+  drop_na(cod) |>
+  pull(cod)
 
 clr <- pal(length(cod_ranked))
 
-i <- which(clr == "#CD0D27")
+i <- which(clr == "#C51C19")
 
 clr <- c(clr[i:length(clr)], clr[1:(i - 1)])
 
-l <- rep(letters[1:4], 20)[1:43]
+l <- rep(letters[1:4], 20)[1:length(clr)]
 
 sq <- sort(setNames(l, seq_along(l)))
 

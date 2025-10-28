@@ -1,3 +1,5 @@
+library(bslib)
+library(bsicons)
 library(tidyverse)
 library(kcData)
 library(setmeup)
@@ -8,11 +10,19 @@ library(highcharter)
 source("scripts/fn.R")
 
 vrd <- readRDS("data/vrd_db_dataset.rds")
-cod <- readRDS("data/cod_rankable.rds")
+cod_cdc <- readRDS("data/cod_rankable_cdc.rds")
+cod_mod <- readRDS("data/cod_rankable_mod.rds")
 cod_colors <- readRDS("data/cod_colors.rds")
 
 
 # Lists for Shiny inputs --------------------------------------------------
+
+## COD categories
+
+catlist <- list(
+  "CDC" = "cdc",
+  "Modified" = "mod"
+)
 
 ## Years
 
@@ -170,7 +180,7 @@ annual_deaths <- vrd |>
   group_by(yod) |>
   summarize(
     n = n(),
-    n_rankable = sum(!is.na(cod_rankable))
+    n_rankable = sum(!is.na(cod_rankable_cdc))
   ) |>
   left_join(popest, by = c("yod" = "year")) |>
   rename(

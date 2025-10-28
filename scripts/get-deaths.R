@@ -2,7 +2,7 @@
 
 library(tidyverse)
 
-yrs <- 2014:2023
+yrs <- 2014:2024
 
 # Find vital stats directories for the years of interest
 p <- paste0("(", paste(yrs, collapse = "|"), ") Vital Stats Files")
@@ -77,9 +77,11 @@ names(nm_missing) <- names(vrd)
 
 print(nm_missing)
 
-# In the 2023 file, `bridgrace` was renamed `multirace`
-vrd$deaths_2023 <- vrd$deaths_2023 |>
-  rename(bridgrace = multirace)
+# In the 2023-2024 files, `bridgrace` was renamed `multirace`
+vrd <- lapply(vrd, \(x) {
+  rename_vars <- c("multirace" = "bridgrace")
+  rename(x, any_of(rename_vars))
+})
 
 # Check variable names
 df <- setmeup::batch_compare(lapply(vrd, colnames))

@@ -96,9 +96,23 @@ codes <- lapply(icd$code, get_icd_seq)
 # Create list of rankable CODs
 r <- which(grepl("#", icd$name))
 
-cod_rankable <- codes[r]
+cod_rankable_cdc <- codes[r]
 
-names(cod_rankable) <- str_squish(sub("^(\\d{1,3})?#\\s", "", icd$name[r]))
+names(cod_rankable_cdc) <- str_squish(sub("^(\\d{1,3})?#\\s", "", icd$name[r]))
 
-saveRDS(cod_rankable, "data/cod_rankable.rds")
+# Break out accidental poisoning
+codes_pois <- paste0("X", 40:49)
+
+x <- cod_rankable_cdc$`Accidents (unintentional injuries)`
+
+codes_non_pois <- x[!x %in% codes_pois]
+
+cod_rankable_mod <- c(
+  cod_rankable_cdc[!grepl("^Accidents", names(cod_rankable_cdc))],
+  list("Accidental poisonings, including drug overdoses (subset of Accidents)" = codes_pois),
+  list("Non-poisoning accidents (subset of Accidents)" = codes_non_pois)
+)
+
+saveRDS(cod_rankable_cdc, "data/cod_rankable_cdc.rds")
+saveRDS(cod_rankable_mod, "data/cod_rankable_mod.rds")
 

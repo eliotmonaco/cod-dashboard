@@ -139,18 +139,19 @@ fix_vital_icd <- function(df, row_id) {
 match_cdc_icd <- function(df, icd) {
   icd <- icd |>
     filter(!grepl("(?i)^deleted|^mc only", status)) |>
-    mutate(code = gsub("[[:punct:]]", "", code)) |>
-    select(-status)
+    mutate(code_clean = gsub("[[:punct:]]", "", code)) |>
+    select(-status) |>
+    rename(icd_code = code)
 
   cod1 <- df |>
     select(rowid, cod) |>
-    left_join(icd, by = c("cod" = "code"))
+    left_join(icd, by = c("cod" = "code_clean"))
 
   cod2 <- cod1 |>
     filter(is.na(icd_title)) |>
-    select(-icd_title) |>
+    select(-icd_code, -icd_title) |>
     mutate(cod = substr(cod, 1, 3)) |>
-    left_join(icd, by = c("cod" = "code"))
+    left_join(icd, by = c("cod" = "code_clean"))
 
   cod_full <- cod1 |>
     drop_na(icd_title) |>
@@ -159,7 +160,7 @@ match_cdc_icd <- function(df, icd) {
 
   df |>
     left_join(cod_full, by = "rowid") |>
-    relocate(cod_matched_icd, icd_title, .after = cod)
+    relocate(cod_matched_icd, icd_code, icd_title, .after = cod)
 }
 
 # Match rankable ICD categories to dataset
@@ -182,6 +183,7 @@ match_rankable_icd <- function(x, ls) {
 # Filter VR dataset based on Shiny inputs
 filter_vrd <- function(
     df,
+    cod_set,
     years_input,
     age_input,
     sex_input,
@@ -236,16 +238,24 @@ filter_vrd <- function(
     return(NULL)
   }
 
-  df
+  if (cod_set == "cdc") {
+    df |>
+      mutate(cod_var = cod_rankable_cdc)
+  } else if (cod_set == "mod") {
+    df |>
+      mutate(cod_var = cod_rankable_mod)
+  } else {
+    stop("unexpected value for `cod_set`")
+  }
 }
 
 # Configure filtered dataset for plot display
 config_bump_data <- function(df, colors) {
   df <- df |>
-    group_by(yod, cod_rankable) |>
+    group_by(yod, cod_var) |>
     summarize(n = n(), .groups = "keep") |>
     ungroup() |>
-    drop_na(cod_rankable)
+    drop_na(cod_var)
 
   maxranks <- 52
 
@@ -259,7 +269,7 @@ config_bump_data <- function(df, colors) {
   })
 
   list_rbind(ls) |>
-    left_join(colors, by = c("cod_rankable" = "cod"))
+    left_join(colors, by = c("cod_var" = "cod"))
 }
 
 # Create leading COD bump chart
@@ -291,8 +301,8 @@ cod_bump_chart <- function(df, xvals, nranks) {
   dflabr <- dflabr |>
     mutate(label = if_else(
       n %in% ties,
-      paste0(cod_rankable, " (", n, ")*"),
-      paste0(cod_rankable, " (", n, ")")
+      paste0(cod_var, " (", n, ")*"),
+      paste0(cod_var, " (", n, ")")
     ))
 
   # Filter data for plot labels
@@ -300,17 +310,17 @@ cod_bump_chart <- function(df, xvals, nranks) {
     filter(
       yod != max(xseq),
       rank %in% 1:nranks,
-      !cod_rankable %in% dflabr$cod_rankable
+      !cod_var %in% dflabr$cod_var
     ) |>
     arrange(desc(yod)) |>
-    distinct(cod_rankable, .keep_all = TRUE)
+    distinct(cod_var, .keep_all = TRUE)
 
   # Base text size
   size <- 20
 
   # Responsive labels (right side)
   maxranks <- sapply(unique(df$yod), \(x) {
-    length(unique(df$cod_rankable[df$yod == x]))
+    length(unique(df$cod_var[df$yod == x]))
   }) |>
     max(na.rm = TRUE)
 
@@ -342,7 +352,7 @@ cod_bump_chart <- function(df, xvals, nranks) {
       x = yod,
       y = yrank,
       color = colors,
-      group = cod_rankable
+      group = cod_var
     )) +
     geom_linerange(
       aes(xmin = min(yod), xmax = max(yod), y = yrank),
@@ -368,7 +378,7 @@ cod_bump_chart <- function(df, xvals, nranks) {
       fill = NA
     ) +
     ggrepel::geom_label_repel( # plot labels
-      aes(label = str_wrap(cod_rankable, 30)),
+      aes(label = str_wrap(cod_var, 30)),
       size = 5,
       fill = "#ffffffdd",
       lineheight = .8,
@@ -425,11 +435,11 @@ cod_bump_chart <- function(df, xvals, nranks) {
 rankable_cod_summary <- function(df, year, cod_name, cod_list) {
   df |>
     filter(
-      cod_rankable == cod_name,
+      cod_var == cod_name,
       yod == year
     ) |>
-    group_by(icd_title) |>
-    summarize(n = n()) |>
+    group_by(icd_code, icd_title) |>
+    summarize(n = n(), .groups = "keep") |>
     arrange(desc(n))
 }
 
@@ -440,6 +450,7 @@ cod_table <- function(df, year, cod_name) {
   df |>
     datatable(
       colnames = c(
+        "ICD-10 code" = "icd_code",
         "Cause of death" = "icd_title",
         "Count" = "n"
       ),

@@ -13,15 +13,15 @@ $bslib-sidebar-bg: $syn-lightblue !default;
   margin-top: 0;
 }
 
-.irs--shiny.irs-with-grid, .shiny-input-select, .action-button {
+.irs--shiny.irs-with-grid, .shiny-input-select, .action-button, .shiny-options-group {
   margin: 0 10px;
 }
 
-#cod.shiny-input-select, #cod.shiny-input-select + .shiny-input-select {
+#codcat.shiny-input-select, #codcat.shiny-input-select + .shiny-input-select {
   min-width: 20em;
 }
 
-#cod.shiny-input-select + .shiny-input-select > .selectize-input > .item {
+#codcat.shiny-input-select + .shiny-input-select > .selectize-input > .item {
  margin-right: 20px;
 }
 

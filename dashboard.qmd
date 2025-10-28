@@ -16,14 +16,14 @@ source("scripts/setup.R")
 
 # {.sidebar}
 
-## Axis filters
+## Plot filters
 
 ```{r}
 sliderInput(
   inputId = "ranks",
   label = "Ranks",
   min = 10,
-  max = length(cod),
+  max = length(cod_cdc),
   value = 10,
   step = 1
 )
@@ -39,9 +39,15 @@ sliderInput(
 )
 ```
 
-## Demographic filters
+## Data filters
 
 ```{r}
+radioButtons(
+  inputId = "cod_set",
+  label = "COD categories",
+  choices = catlist
+)
+
 selectInput(
   inputId = "age",
   label = "Age",
@@ -77,11 +83,7 @@ selectInput(
   label = "Pregnancy status",
   choices = preglist
 )
-```
 
-## Geographic filters
-
-```{r}
 selectInput(
   inputId = "dist",
   label = "Council district",
@@ -99,6 +101,27 @@ actionButton(
 ```
 
 # Overview
+
+## Row {height = "10%"}
+
+```{r}
+# #| content: valuebox
+# #| title: "Total deaths"
+# 
+# list(
+#   icon = ,
+#   color = ,
+#   value = textOutput("nd")
+# )
+
+value_box(
+  # title = paste("Total deaths in", input$years[2]),
+  title = paste("Total deaths in", textOutput("yr")),
+  value = textOutput("nd"),
+  showcase = bs_icon("clock"),
+  theme = "purple"
+)
+```
 
 ## Row
 
@@ -124,9 +147,9 @@ plotOutput("bump")
 
 ```{r}
 selectInput(
-  inputId = "cod",
+  inputId = "codcat",
   label = "Rankable COD category",
-  choices = sort(names(cod))
+  choices = sort(names(cod_cdc))
 )
 ```
 
@@ -142,6 +165,7 @@ DTOutput("table")
 data <- reactive({
   df <- filter_vrd(
     vrd,
+    cod_set = input$cod_set,
     years_input = input$years,
     age_input = input$age,
     sex_input = input$sex,
@@ -157,6 +181,28 @@ data <- reactive({
   df
 })
 
+yr <- reactive({input$years[2]})
+
+output$yr <- renderText({yr()})
+
+n_deaths <- reactive({
+  annual_deaths |>
+    filter(year == yr()) |>
+    pull(n)
+})
+
+cod_src_list <- reactive({
+  if (input$cod_set == "cdc") {
+    cod_cdc
+  } else if (input$cod_set == "mod") {
+    cod_mod
+  }
+})
+
+output$nd <- renderText({
+  format(n_deaths(), big.mark = ",")
+})
+
 # Leading COD bump chart
 output$bump <- renderPlot({
   data() |>
@@ -169,13 +215,32 @@ output$table <- renderDT({
   data() |>
     rankable_cod_summary(
       year = input$years[2],
-      cod_name = input$cod,
-      cod_list = cod
+      cod_name = input$codcat,
+      cod_list = cod_src_list()
     ) |>
     cod_table(
       year = input$years[2],
-      cod_name = input$cod
+      cod_name = input$codcat
     )
+})
+
+# Update COD breakdown menu based on COD category selection
+observe({
+  if (input$cod_set == "cdc") {
+    updateSelectInput(
+      session,
+      inputId = "codcat",
+      label = "Rankable COD category",
+      choices = sort(names(cod_cdc))
+    )
+  } else if (input$cod_set == "mod") {
+    updateSelectInput(
+      session,
+      inputId = "codcat",
+      label = "Rankable COD category",
+      choices = sort(names(cod_mod))
+    )
+  }
 })
 
 # Reset button
