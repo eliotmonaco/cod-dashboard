@@ -8,6 +8,10 @@ $bslib-sidebar-bg: $syn-lightblue !default;
 
 /*-- scss:rules --*/
 
+.sb-filter-group {
+  margin-bottom: 20px;
+}
+
 .sidebar.html-fill-container h2 {
   font-size: 1rem;
   margin-top: 0;

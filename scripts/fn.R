@@ -518,11 +518,11 @@ plot_ann_deaths <- function(df, type = c("n", "pct")) {
           style = list(fontSize = fontsize2)
         )
       ) |>
-      hc_tooltip(formatter = jsfn) |>
-      hc_title(
-        text = "Annual deaths in Kansas City, MO",
-        align = "left"
-      )
+      hc_tooltip(formatter = jsfn) #|>
+      # hc_title(
+      #   text = "Annual deaths in Kansas City, MO",
+      #   align = "left"
+      # )
   } else if (type == "pct") {
     jsfn <- JS(
       "function() {
@@ -534,21 +534,21 @@ plot_ann_deaths <- function(df, type = c("n", "pct")) {
     p |>
       hc_yAxis(
         title = list(
-          text = "Percentage of Kansas City population",
+          text = "Percentage",
           style = list(fontSize = fontsize1)
         ),
         labels = list(
           style = list(fontSize = fontsize2)
         )
       ) |>
-      hc_tooltip(formatter = jsfn) |>
-      hc_title(
-        text = paste(
-          "Annual deaths in Kansas City, MO,",
-          "as a percentage of population"
-        ),
-        align = "left"
-      )
+      hc_tooltip(formatter = jsfn) #|>
+      # hc_title(
+      #   text = paste(
+      #     "Annual deaths in Kansas City, MO,",
+      #     "as a percentage of population"
+      #   ),
+      #   align = "left"
+      # )
   }
 }
 

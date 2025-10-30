@@ -174,7 +174,7 @@ distlist <- list(
 
 # Overview table ----------------------------------------------------------
 
-popest <- return_popest_table(2014:2023)
+popest <- return_popest_table(2014:2024)
 
 annual_deaths <- vrd |>
   group_by(yod) |>

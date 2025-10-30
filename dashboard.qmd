@@ -16,6 +16,8 @@ source("scripts/setup.R")
 
 # {.sidebar}
 
+:::{.sb-filter-group}
+
 ## Plot filters
 
 ```{r}
@@ -38,6 +40,9 @@ sliderInput(
   sep = ""
 )
 ```
+
+:::
+:::{.sb-filter-group}
 
 ## Data filters
 
@@ -91,47 +96,59 @@ selectInput(
 )
 ```
 
-## Reset
+:::
+:::{.sb-filter-group}
+
+## Reset filters
 
 ```{r}
 actionButton(
   inputId = "reset",
-  label = "Reset filters"
+  label = "Reset all"
 )
 ```
+
+:::
 
 # Overview
 
 ## Row {height = "10%"}
 
 ```{r}
-# #| content: valuebox
-# #| title: "Total deaths"
-# 
-# list(
-#   icon = ,
-#   color = ,
-#   value = textOutput("nd")
-# )
-
 value_box(
-  # title = paste("Total deaths in", input$years[2]),
-  title = paste("Total deaths in", textOutput("yr")),
-  value = textOutput("nd"),
-  showcase = bs_icon("clock"),
-  theme = "purple"
+  title = textOutput("nd_text"),
+  value = textOutput("nd_val"),
+  showcase = bs_icon("bar-chart-fill"),
+  theme = value_box_theme(bg = "#fae6fd", fg = "#78008a"),
+  min_height = "100px",
+  fill = TRUE
+)
+```
+
+```{r}
+value_box(
+  title = textOutput("ndr_text"),
+  value = textOutput("ndr_val"),
+  showcase = bs_icon("bar-chart"),
+  theme = value_box_theme(bg = "#e6fdea", fg = "#018a19"),
+  min_height = "100px",
+  fill = TRUE
 )
 ```
 
 ## Row
 
 ```{r}
+#| title: "Annual deaths in Kansas City, MO"
+
 highchartOutput("ann1")
 ```
 
 ## Row
 
 ```{r}
+#| title: "Annual deaths in Kansas City, MO, as a percentage of population"
+
 highchartOutput("ann2")
 ```
 
@@ -181,9 +198,8 @@ data <- reactive({
   df
 })
 
+# Value boxes
 yr <- reactive({input$years[2]})
-
-output$yr <- renderText({yr()})
 
 n_deaths <- reactive({
   annual_deaths |>
@@ -191,16 +207,35 @@ n_deaths <- reactive({
     pull(n)
 })
 
-cod_src_list <- reactive({
+n_rankable_deaths <- reactive({
+  annual_deaths |>
+    filter(year == yr()) |>
+    pull(n_rankable)
+})
+
+output$nd_text <- renderText({
+  paste("Total deaths in", yr())
+})
+
+output$nd_val <- renderText({
+  format(n_deaths(), big.mark = ",")
+})
+
+output$ndr_text <- renderText({
+  paste("Total rankable deaths in", yr())
+})
+
+output$ndr_val <- renderText({
+  format(n_rankable_deaths(), big.mark = ",")
+})
+
+# Toggle for COD set to be used (CDC vs modified set)
+cod_set_list <- reactive({
   if (input$cod_set == "cdc") {
     cod_cdc
   } else if (input$cod_set == "mod") {
     cod_mod
   }
-})
-
-output$nd <- renderText({
-  format(n_deaths(), big.mark = ",")
 })
 
 # Leading COD bump chart
@@ -216,7 +251,7 @@ output$table <- renderDT({
     rankable_cod_summary(
       year = input$years[2],
       cod_name = input$codcat,
-      cod_list = cod_src_list()
+      cod_list = cod_set_list()
     ) |>
     cod_table(
       year = input$years[2],
@@ -260,7 +295,7 @@ observeEvent(input$reset, {
 output$ann1 <- renderHighchart({
   plot_ann_deaths(
     annual_deaths |>
-      select(year, "Deaths" = n, "Rankable deaths" = n_rankable),
+      select(year, "All deaths" = n, "Rankable deaths" = n_rankable),
     type = "n"
   )
 })
@@ -268,7 +303,7 @@ output$ann1 <- renderHighchart({
 output$ann2 <- renderHighchart({
   plot_ann_deaths(
     annual_deaths |>
-      select(year, "Deaths" = pct, "Rankable deaths" = pct_rankable),
+      select(year, "All deaths" = pct, "Rankable deaths" = pct_rankable),
     type = "pct"
   )
 })
