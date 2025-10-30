@@ -9,7 +9,7 @@ $bslib-sidebar-bg: $syn-lightblue !default;
 /*-- scss:rules --*/
 
 .sb-filter-group {
-  margin-bottom: 20px;
+  padding-bottom: 20px;
 }
 
 .sidebar.html-fill-container h2 {
@@ -17,7 +17,7 @@ $bslib-sidebar-bg: $syn-lightblue !default;
   margin-top: 0;
 }
 
-.irs--shiny.irs-with-grid, .shiny-input-select, .action-button, .shiny-options-group {
+.irs.irs--shiny, .shiny-input-select, .action-button, .shiny-options-group {
   margin: 0 10px;
 }
 
@@ -42,3 +42,6 @@ $bslib-sidebar-bg: $syn-lightblue !default;
   justify-content: center;
 }
 
+#selections.shiny-text-output {
+  font-size: .8em;
+}

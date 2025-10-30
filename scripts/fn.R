@@ -198,10 +198,8 @@ filter_vrd <- function(
       yod <= years_input[2]
     )
 
-  if (age_input != "all") {
-    df <- df |>
-      filter(age %in% unlist(strsplit(age_input, ";")))
-  }
+  df <- df |>
+    filter(age %in% age_input)
 
   if (sex_input != "all") {
     df <- df |>
@@ -223,9 +221,9 @@ filter_vrd <- function(
       filter(ed2010 == education_input)
   }
 
-  if (pregnancy_input != "all") {
+  if (length(pregnancy_input) != 1 || pregnancy_input != "all") {
     df <- df |>
-      filter(pregnancy == pregnancy_input)
+      filter(pregnancy %in% pregnancy_input)
   }
 
   if (district_input != "all") {
@@ -234,7 +232,7 @@ filter_vrd <- function(
   }
 
   # If filters result in empty dataframe, return NULL
-  if (nrow(df) == 0) {
+  if (is.null(pregnancy_input) || nrow(df) == 0) {
     return(NULL)
   }
 
@@ -273,7 +271,7 @@ config_bump_data <- function(df, colors) {
 }
 
 # Create leading COD bump chart
-cod_bump_chart <- function(df, xvals, nranks) {
+cod_bump_chart <- function(df, xvals, nranks, caption) {
   # x-axis scale
   xseq <- xvals[1]:xvals[2]
 
@@ -342,10 +340,6 @@ cod_bump_chart <- function(df, xvals, nranks) {
   # Text
   title <- "Ranked leading causes of death in Kansas City, MO"
 
-  note <- paste(
-    "**Note:** Labels on the right side of the plot name the rankable causes of death (CODs) and the number of deaths in that category for the final year displayed. Tied counts are ranked by their first appearance in the data and are denoted by an asterisk (*). Labels over points in the plot name rankable CODs that are not in the top ranked CODs in the final year displayed."
-  )
-
   # Plot
   df |>
     ggplot(aes(
@@ -407,7 +401,7 @@ cod_bump_chart <- function(df, xvals, nranks) {
       x = "Year",
       y = "Rank",
       title = title,
-      caption = note
+      caption = caption
     ) +
     theme_minimal(base_size = size) +
     theme(
@@ -429,6 +423,37 @@ cod_bump_chart <- function(df, xvals, nranks) {
       plot.title.position = "plot",
       plot.caption.position = "plot"
     )
+}
+
+# Create bump chart caption
+cod_bump_caption <- function(names, inputs, filters, ages) {
+  # Combine elements of names, inputs, and filters lists
+  ls <- lapply(names(filters), \(i) {
+    if (length(inputs[[i]]) == 1) {
+      paste0(names[[i]], ": ", names(which(inputs[[i]] == filters[[i]])))
+    } else {
+      paste0(names[[i]], ": ", paste(
+        sapply(inputs[[i]], \(x) names(which(x == filters[[i]]))),
+        collapse = "; "
+      ))
+    }
+  })
+
+  selections <- paste(unlist(ls), collapse = " | ")
+
+  selections <- paste0(
+    "**Categories selected:** ",
+    "Age: ", ages[1], " to ", ages[length(ages)], " | ",
+    selections
+  )
+
+  note <- "**Note:** Labels on the right side of the plot name the rankable causes of death (CODs) and the number of deaths in that category for the final year displayed. Tied counts are ranked by their first appearance in the data and are denoted by an asterisk (*). Labels over points in the plot name rankable CODs that are not in the top ranked CODs in the final year displayed."
+
+  paste(
+    note,
+    selections,
+    sep = "<br><br>"
+  )
 }
 
 # Summarize filtered dataset by rankable COD for table display

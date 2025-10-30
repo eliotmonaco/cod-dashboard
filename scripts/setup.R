@@ -19,7 +19,7 @@ cod_colors <- readRDS("data/cod_colors.rds")
 
 ## COD categories
 
-catlist <- list(
+codlist <- list(
   "CDC" = "cdc",
   "Modified" = "mod"
 )
@@ -170,6 +170,24 @@ distlist <- list(
   "4th" = "4",
   "5th" = "5",
   "6th" = "6"
+)
+
+datafilters <- list(
+  sex = sexlist,
+  race = racelist,
+  hispanic = hispaniclist,
+  education = edlist,
+  pregnancy = preglist,
+  district = distlist
+)
+
+filternames <- list(
+  sex = "Sex",
+  race = "Race",
+  hispanic = "Hispanic origin",
+  education = "Education level",
+  pregnancy = "Pregnancy status",
+  district = "Council district"
 )
 
 # Overview table ----------------------------------------------------------

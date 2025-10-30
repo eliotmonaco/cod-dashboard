@@ -27,7 +27,8 @@ sliderInput(
   min = 10,
   max = length(cod_cdc),
   value = 10,
-  step = 1
+  step = 1,
+  ticks = FALSE
 )
 
 sliderInput(
@@ -37,7 +38,8 @@ sliderInput(
   max = yrsrng[2],
   value = yrsrng,
   step = 1,
-  sep = ""
+  sep = "",
+  ticks = FALSE
 )
 ```
 
@@ -48,15 +50,34 @@ sliderInput(
 
 ```{r}
 radioButtons(
-  inputId = "cod_set",
-  label = "COD categories",
-  choices = catlist
+  inputId = "codset",
+  label = "COD definitions",
+  choices = codlist
 )
 
 selectInput(
-  inputId = "age",
-  label = "Age",
+  inputId = "agebin",
+  label = "Age bin",
   choices = agelist
+)
+
+# shinyWidgets::numericRangeInput(
+#   inputId = "age",
+#   label = "Age",
+#   value = c(0, maxage),
+#   min = 0,
+#   max = maxage,
+#   step = 1
+# )
+
+sliderInput(
+  inputId = "agerng",
+  label = "Age range",
+  min = 0,
+  max = maxage,
+  value = c(0, maxage),
+  step = 1,
+  ticks = FALSE
 )
 
 selectInput(
@@ -86,11 +107,13 @@ selectInput(
 selectInput(
   inputId = "pregnancy",
   label = "Pregnancy status",
-  choices = preglist
+  choices = preglist,
+  selected = preglist[[1]],
+  multiple = TRUE
 )
 
 selectInput(
-  inputId = "dist",
+  inputId = "district",
   label = "Council district",
   choices = distlist
 )
@@ -112,7 +135,7 @@ actionButton(
 
 # Overview
 
-## Row {height = "10%"}
+## Row {height="10%"}
 
 ```{r}
 value_box(
@@ -154,6 +177,8 @@ highchartOutput("ann2")
 
 # Leading causes
 
+## Row
+
 ```{r}
 plotOutput("bump")
 ```
@@ -179,18 +204,34 @@ DTOutput("table")
 ```{r}
 #| context: server
 
+# Set `age()` value based on which age input is changed
+age <- reactiveVal(0:maxage)
+
+observeEvent(input$agebin, {
+  if (input$agebin != "all") {
+    age(unlist(strsplit(input$agebin, ";")))
+  } else {
+    age(0:maxage)
+  }
+})
+
+observeEvent(input$agerng, {
+  age(seq(input$agerng[1], input$agerng[2], 1))
+})
+
+# Filter `vrd` dataset
 data <- reactive({
   df <- filter_vrd(
     vrd,
-    cod_set = input$cod_set,
+    cod_set = input$codset,
     years_input = input$years,
-    age_input = input$age,
+    age_input = age(),
     sex_input = input$sex,
     race_input = input$race,
     hispanic_input = input$hispanic,
     education_input = input$education,
     pregnancy_input = input$pregnancy,
-    district_input = input$dist
+    district_input = input$district
   )
   
   validate(need(df, "There are no records matching the selection criteria"))
@@ -229,20 +270,34 @@ output$ndr_val <- renderText({
   format(n_rankable_deaths(), big.mark = ",")
 })
 
-# Toggle for COD set to be used (CDC vs modified set)
+# Toggle COD set (CDC vs modified)
 cod_set_list <- reactive({
-  if (input$cod_set == "cdc") {
+  if (input$codset == "cdc") {
     cod_cdc
-  } else if (input$cod_set == "mod") {
+  } else if (input$codset == "mod") {
     cod_mod
   }
+})
+
+# Caption text
+caption <- reactive({
+  cod_bump_caption(
+    names = filternames,
+    inputs = input,
+    filters = datafilters,
+    ages = age()
+  )
 })
 
 # Leading COD bump chart
 output$bump <- renderPlot({
   data() |>
     config_bump_data(colors = cod_colors) |>
-    cod_bump_chart(xvals = input$years, nranks = input$ranks)
+    cod_bump_chart(
+      xvals = input$years,
+      nranks = input$ranks,
+      caption = caption()
+    )
 })
 
 # COD breakdown table
@@ -261,14 +316,14 @@ output$table <- renderDT({
 
 # Update COD breakdown menu based on COD category selection
 observe({
-  if (input$cod_set == "cdc") {
+  if (input$codset == "cdc") {
     updateSelectInput(
       session,
       inputId = "codcat",
       label = "Rankable COD category",
       choices = sort(names(cod_cdc))
     )
-  } else if (input$cod_set == "mod") {
+  } else if (input$codset == "mod") {
     updateSelectInput(
       session,
       inputId = "codcat",
@@ -282,13 +337,14 @@ observe({
 observeEvent(input$reset, {
   updateNumericInput(session, "ranks", value = 10)
   updateNumericInput(session, "years", value = yrsrng)
-  updateNumericInput(session, "age", value = agelist[[1]])
+  updateNumericInput(session, "agebin", value = agelist[[1]])
+  updateNumericInput(session, "agerng", value = c(0, maxage))
   updateNumericInput(session, "sex", value = sexlist[[1]])
   updateNumericInput(session, "race", value = racelist[[1]])
   updateNumericInput(session, "hispanic", value = hispaniclist[[1]])
   updateNumericInput(session, "education", value = edlist[[1]])
   updateNumericInput(session, "pregnancy", value = preglist[[1]])
-  updateNumericInput(session, "dist", value = distlist[[1]])
+  updateNumericInput(session, "district", value = distlist[[1]])
 })
 
 # Annual deaths plots
@@ -308,6 +364,4 @@ output$ann2 <- renderHighchart({
   )
 })
 ```
-
-
 

@@ -6,7 +6,7 @@ yrs <- c(2014, 2024)
 # Configure `vrd` based on Shiny inputs
 df <- filter_vrd(
   vrd,
-  cod_set = catlist[[2]],
+  cod_set = codlist[[2]],
   years_input = yrs,
   age_input = agelist[[1]],
   sex_input = sexlist[[1]],
@@ -14,6 +14,7 @@ df <- filter_vrd(
   hispanic_input = hispaniclist[[1]],
   education_input = edlist[[1]],
   pregnancy_input = preglist[[1]],
+  # pregnancy_input = c(preglist[[3]], preglist[[4]]),
   district_input = distlist[[1]]
 )
 
