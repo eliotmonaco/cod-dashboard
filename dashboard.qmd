@@ -135,7 +135,7 @@ actionButton(
 
 # Overview
 
-## Row {height="10%"}
+## Row
 
 ```{r}
 value_box(
@@ -143,8 +143,9 @@ value_box(
   value = textOutput("nd_val"),
   showcase = bs_icon("bar-chart-fill"),
   theme = value_box_theme(bg = "#fae6fd", fg = "#78008a"),
-  min_height = "100px",
-  fill = TRUE
+  height = "130px",
+  min_height = "80px",
+  class = "vb-cod"
 )
 ```
 
@@ -154,8 +155,9 @@ value_box(
   value = textOutput("ndr_val"),
   showcase = bs_icon("bar-chart"),
   theme = value_box_theme(bg = "#e6fdea", fg = "#018a19"),
-  min_height = "100px",
-  fill = TRUE
+  height = "130px",
+  min_height = "80px",
+  class = "vb-cod"
 )
 ```
 

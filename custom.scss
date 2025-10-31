@@ -37,6 +37,10 @@ $bslib-sidebar-bg: $syn-lightblue !default;
   font-weight: bold;
 } */
 
+.vb-cod #nd_val, .vb-cod #ndr_val {
+	font-size: clamp(.1em,10cqw,3em);
+}
+
 .shiny-output-error {
   display: grid;
   justify-content: center;

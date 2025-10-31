@@ -45,6 +45,93 @@ f <- list.files(paste0("../data/", dir), ".shp$", full.names = TRUE)
 dist <- st_read(f)
 ```
 
+# Validate VR data
+
+Validate `yod`.
+
+```{r}
+vrd |>
+  filter(as.numeric(yod) < 2014 | as.numeric(yod) > 2024) |>
+  nrow()
+```
+
+Validate `citylimit`.
+
+```{r}
+vrd |>
+  count(citylimit)
+```
+
+Validate `age`.
+
+```{r}
+vrd |>
+  filter(!as.numeric(age) %in% 0:120 | is.na(as.numeric(age))) |>
+  nrow()
+```
+
+Validate `sex`.
+
+```{r}
+vrd |>
+  count(sex)
+```
+
+Validate race variables.
+
+```{r}
+vars <- c(
+  "racewht",
+  "raceblk",
+  "raceind",
+  "raceasind",
+  "racechin",
+  "raceflip",
+  "racejap",
+  "racekor",
+  "raceviet",
+  "raceaoth",
+  "racehaw",
+  "raceguam",
+  "racesamoa",
+  "raceioth",
+  "raceoth"
+)
+
+vrd |>
+  stack(vars) |>
+  count(values)
+```
+
+Validate race variables.
+
+```{r}
+vars <- c(
+  "mexican",
+  "puer",
+  "cuban",
+  "hother"
+)
+
+vrd |>
+  stack(vars) |>
+  count(values)
+```
+
+Validate `ed2010`.
+
+```{r}
+vrd |>
+  count(ed2010)
+```
+
+Validate `pregnancy`.
+
+```{r}
+vrd |>
+  count(pregnancy)
+```
+
 # Configure VR data
 
 Configure deaths dataset.

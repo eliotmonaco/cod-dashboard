@@ -449,10 +449,13 @@ cod_bump_caption <- function(names, inputs, filters, ages) {
 
   note <- "**Note:** Labels on the right side of the plot name the rankable causes of death (CODs) and the number of deaths in that category for the final year displayed. Tied counts are ranked by their first appearance in the data and are denoted by an asterisk (*). Labels over points in the plot name rankable CODs that are not in the top ranked CODs in the final year displayed."
 
+  src <- "**Data source:** Missouri Department of Health and Senior Services Vital Records."
+
   paste(
     note,
     selections,
-    sep = "<br><br>"
+    src,
+    sep = "<br>"
   )
 }
 
