@@ -216,7 +216,7 @@ vrd <- vrd |>
   relocate(cod_rankable_cdc, .after = cod_matched_icd)
 ```
 
-Add rankable COD variable based on NVSS list with accidental drug overdoses separated from other accidents.
+Add rankable COD variable from modified NVSS list.
 
 ```{r}
 # Create regex patterns
