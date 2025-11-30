@@ -10,16 +10,15 @@ library(highcharter)
 source("scripts/fn.R")
 
 vrd <- readRDS("data/vrd_db_dataset.rds")
-cod_cdc <- readRDS("data/cod_rankable_cdc.rds")
-cod_mod <- readRDS("data/cod_rankable_mod.rds")
-cod_colors <- readRDS("data/cod_colors.rds")
+rcod <- readRDS("data/rankable_cod_categories.rds")
+clrs <- readRDS("data/rcod_colors.rds")
 
 
 # Lists for Shiny inputs --------------------------------------------------
 
 ## COD categories
 
-codlist <- list(
+rcodlist <- list(
   "CDC" = "cdc",
   "Modified" = "mod"
 )
@@ -173,6 +172,7 @@ distlist <- list(
 )
 
 datafilters <- list(
+  agebin = agelist,
   sex = sexlist,
   race = racelist,
   hispanic = hispaniclist,
@@ -182,6 +182,7 @@ datafilters <- list(
 )
 
 filternames <- list(
+  agebin = "Age",
   sex = "Sex",
   race = "Race",
   hispanic = "Hispanic origin",
@@ -198,7 +199,7 @@ annual_deaths <- vrd |>
   group_by(yod) |>
   summarize(
     n = n(),
-    n_rankable = sum(!is.na(cod_rankable_cdc))
+    n_rankable = sum(!is.na(rcod_cdc))
   ) |>
   left_join(popest, by = c("yod" = "year")) |>
   rename(

@@ -77,10 +77,11 @@ match_cdc_icd <- function(df, icd) {
     relocate(cod_matched_icd, icd_code, icd_title, .after = cod)
 }
 
-# Match rankable ICD categories to dataset
-match_rankable_icd <- function(x, ls) {
-  cod <- purrr::imap(ls, \(p, i) {
-    if (grepl(p, x)) {
+# Match an ICD code to its rankable COD category
+fn_match_rcod <- function(icd, cod_list) {
+  # If ICD code is matched by a pattern, return the rankable COD name
+  cod <- purrr::imap(cod_list, \(p, i) {
+    if (grepl(p, icd)) {
       i
     }
   })
@@ -94,10 +95,28 @@ match_rankable_icd <- function(x, ls) {
   }
 }
 
+# Match a vector of ICD codes to their rankable COD categories
+match_rankable_cod <- function(icd, cod_list) {
+  # Create regex patterns
+  p_list <- lapply(cod_list, \(x) {
+    paste(paste0("^", sub("\\.", "", x)), collapse = "|")
+  })
+
+  # Get rankable COD categories
+  x <- sapply(icd, fn_match_rcod, p_list)
+
+  # Check if any ICD code was matched to > 1 COD
+  if (any(sapply(x, length) > 1)) {
+    message("At least one ICD code was matched to > 1 COD")
+  }
+
+  x
+}
+
 # Filter VR dataset based on Shiny inputs
 filter_vrd <- function(
     df,
-    cod_set,
+    rcod_set = c("cdc", "mod"),
     years_input,
     age_input,
     sex_input,
@@ -105,7 +124,10 @@ filter_vrd <- function(
     hispanic_input,
     education_input,
     pregnancy_input,
-    district_input) {
+    district_input,
+    use_alt_names = TRUE) {
+  rcod_set <- match.arg(rcod_set)
+
   df <- df |>
     filter(
       yod >= years_input[1],
@@ -150,24 +172,28 @@ filter_vrd <- function(
     return(NULL)
   }
 
-  if (cod_set == "cdc") {
+  if (rcod_set == "cdc" & use_alt_names) {
     df |>
-      mutate(cod_var = cod_rankable_cdc)
-  } else if (cod_set == "mod") {
+      mutate(rcod_var = rcod_cdc_alt)
+  } else if (rcod_set == "mod" & use_alt_names) {
     df |>
-      mutate(cod_var = cod_rankable_mod)
-  } else {
-    stop("unexpected value for `cod_set`")
+      mutate(rcod_var = rcod_mod_alt)
+  } else if (rcod_set == "cdc" & !use_alt_names) {
+    df |>
+      mutate(rcod_var = rcod_cdc)
+  } else if (rcod_set == "mod" & !use_alt_names) {
+    df |>
+      mutate(rcod_var = rcod_mod)
   }
 }
 
 # Configure filtered dataset for plot display
 config_bump_data <- function(df, colors) {
   df <- df |>
-    group_by(yod, cod_var) |>
+    group_by(yod, rcod_var) |>
     summarize(n = n(), .groups = "keep") |>
     ungroup() |>
-    drop_na(cod_var)
+    drop_na(rcod_var)
 
   maxranks <- 52
 
@@ -181,7 +207,51 @@ config_bump_data <- function(df, colors) {
   })
 
   list_rbind(ls) |>
-    left_join(colors, by = c("cod_var" = "cod"))
+    left_join(
+      colors |>
+        select(name2, color),
+      by = c("rcod_var" = "name2")
+    )
+}
+
+# Create bump chart caption
+cod_bump_caption <- function(names, inputs, filters, max_age, ages) {
+  # Combine elements of names, inputs, and filters lists
+  ls <- lapply(names(filters), \(i) {
+    if (length(inputs[[i]]) == 1) {
+      paste0(names[[i]], ": ", names(which(inputs[[i]] == filters[[i]])))
+    } else {
+      paste0(names[[i]], ": ", paste(
+        sapply(inputs[[i]], \(x) names(which(x == filters[[i]]))),
+        collapse = "; "
+      ))
+    }
+  })
+
+  names(ls) <- names(filters)
+
+  # If `age()` contains the full range of ages in `vrd`, display "Age: all"
+  if (!identical(as.numeric(ages), as.numeric(0:max_age))) {
+    ls$agebin <- paste0("Age: ", ages[1], " to ", ages[length(ages)])
+  }
+
+  selections <- paste(unlist(ls), collapse = " | ")
+
+  selections <- paste0(
+    "**Categories selected:** ",
+    selections
+  )
+
+  note <- "**Note:** Rankable causes of death (COD) are listed on the right side of the plot for the final year displayed only. The count of deaths for each cause follows in parentheses. Tied counts are ranked by their first appearance in the data and are denoted by an asterisk (*). CODs that are not among the top ranked in the final year displayed are labelled elsewhere in the plot."
+
+  datasrc <- "**Data source:** Missouri Department of Health and Senior Services Vital Records."
+
+  paste(
+    note,
+    selections,
+    datasrc,
+    sep = "<br>"
+  )
 }
 
 # Create leading COD bump chart
@@ -213,8 +283,8 @@ cod_bump_chart <- function(df, xvals, nranks, caption) {
   dflabr <- dflabr |>
     mutate(label = if_else(
       n %in% ties,
-      paste0(cod_var, " (", n, ")*"),
-      paste0(cod_var, " (", n, ")")
+      paste0(rcod_var, " (", n, ")*"),
+      paste0(rcod_var, " (", n, ")")
     ))
 
   # Filter data for plot labels
@@ -222,17 +292,17 @@ cod_bump_chart <- function(df, xvals, nranks, caption) {
     filter(
       yod != max(xseq),
       rank %in% 1:nranks,
-      !cod_var %in% dflabr$cod_var
+      !rcod_var %in% dflabr$rcod_var
     ) |>
     arrange(desc(yod)) |>
-    distinct(cod_var, .keep_all = TRUE)
+    distinct(rcod_var, .keep_all = TRUE)
 
   # Base text size
   size <- 20
 
   # Responsive labels (right side)
   maxranks <- sapply(unique(df$yod), \(x) {
-    length(unique(df$cod_var[df$yod == x]))
+    length(unique(df$rcod_var[df$yod == x]))
   }) |>
     max(na.rm = TRUE)
 
@@ -259,8 +329,8 @@ cod_bump_chart <- function(df, xvals, nranks, caption) {
     ggplot(aes(
       x = yod,
       y = yrank,
-      color = colors,
-      group = cod_var
+      color = color,
+      group = rcod_var
     )) +
     geom_linerange(
       aes(xmin = min(yod), xmax = max(yod), y = yrank),
@@ -286,7 +356,7 @@ cod_bump_chart <- function(df, xvals, nranks, caption) {
       fill = NA
     ) +
     ggrepel::geom_label_repel( # plot labels
-      aes(label = str_wrap(cod_var, 30)),
+      aes(label = str_wrap(rcod_var, 30)),
       size = 5,
       fill = "#ffffffdd",
       lineheight = .8,
@@ -339,45 +409,11 @@ cod_bump_chart <- function(df, xvals, nranks, caption) {
     )
 }
 
-# Create bump chart caption
-cod_bump_caption <- function(names, inputs, filters, ages) {
-  # Combine elements of names, inputs, and filters lists
-  ls <- lapply(names(filters), \(i) {
-    if (length(inputs[[i]]) == 1) {
-      paste0(names[[i]], ": ", names(which(inputs[[i]] == filters[[i]])))
-    } else {
-      paste0(names[[i]], ": ", paste(
-        sapply(inputs[[i]], \(x) names(which(x == filters[[i]]))),
-        collapse = "; "
-      ))
-    }
-  })
-
-  selections <- paste(unlist(ls), collapse = " | ")
-
-  selections <- paste0(
-    "**Categories selected:** ",
-    "Age: ", ages[1], " to ", ages[length(ages)], " | ",
-    selections
-  )
-
-  note <- "**Note:** Labels on the right side of the plot name the rankable causes of death (CODs) and the number of deaths in that category for the final year displayed. Tied counts are ranked by their first appearance in the data and are denoted by an asterisk (*). Labels over points in the plot name rankable CODs that are not in the top ranked CODs in the final year displayed."
-
-  src <- "**Data source:** Missouri Department of Health and Senior Services Vital Records."
-
-  paste(
-    note,
-    selections,
-    src,
-    sep = "<br>"
-  )
-}
-
 # Summarize filtered dataset by rankable COD for table display
-rankable_cod_summary <- function(df, year, cod_name, cod_list) {
+rankable_cod_summary <- function(df, year, rcod_name, cod_list) {
   df |>
     filter(
-      cod_var == cod_name,
+      rcod_var == rcod_name,
       yod == year
     ) |>
     group_by(icd_code, icd_title) |>
@@ -386,8 +422,8 @@ rankable_cod_summary <- function(df, year, cod_name, cod_list) {
 }
 
 # Create COD breakdown table
-cod_table <- function(df, year, cod_name) {
-  title <- paste0(cod_name, ", ", year)
+cod_table <- function(df, year, rcod_name) {
+  title <- paste0(rcod_name, ", ", year)
 
   df |>
     datatable(

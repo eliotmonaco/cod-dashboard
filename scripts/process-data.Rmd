@@ -31,8 +31,7 @@ icd <- readxl::read_excel(
 Import list of rankable CODs.
 
 ```{r}
-cod_cdc <- readRDS("../data/cod_rankable_cdc.rds")
-cod_mod <- readRDS("../data/cod_rankable_mod.rds")
+rcod <- readRDS("../data/rankable_cod_categories.rds")
 ```
 
 Import city council districts shapefile (2023).
@@ -195,46 +194,35 @@ vrd |>
   filter(is.na(icd_title))
 ```
 
-Add rankable COD variable from NVSS list.
+Add rankable COD variables from NVSS list and modified NVSS list.
 
 ```{r}
-# Create regex patterns
-cod_cdc <- lapply(cod_cdc, \(x) {
-  paste(paste0("^", sub("\\.", "", x)), collapse = "|")
-})
+vrd$rcod_cdc <- match_rankable_cod(vrd$cod, rcod$cdc)
 
-# Get rankable COD categories
-cod_ranked_cdc <- sapply(vrd$cod, match_rankable_icd, ls = cod_cdc)
-
-# Check if any ICD code was matched to > 1 COD
-any(sapply(cod_ranked_cdc, length) > 1)
-
-# Add to `vrd`
-vrd$cod_rankable_cdc <- cod_ranked_cdc
-
-vrd <- vrd |>
-  relocate(cod_rankable_cdc, .after = cod_matched_icd)
+vrd$rcod_mod <- match_rankable_cod(vrd$cod, rcod$mod)
 ```
 
-Add rankable COD variable from modified NVSS list.
+Add alternative names for rankable CODs.
 
 ```{r}
-# Create regex patterns
-cod_mod <- lapply(cod_mod, \(x) {
-  paste(paste0("^", sub("\\.", "", x)), collapse = "|")
-})
+cdc_alt <- setNames(rcod$cdc_alt$name2, rcod$cdc_alt$name1)
+mod_alt <- setNames(rcod$mod_alt$name2, rcod$mod_alt$name1)
 
-# Get rankable COD categories
-cod_ranked_mod <- sapply(vrd$cod, match_rankable_icd, ls = cod_mod)
+vrd$rcod_cdc_alt <- cdc_alt[vrd$rcod_cdc]
+vrd$rcod_mod_alt <- mod_alt[vrd$rcod_mod]
+```
 
-# Check if any ICD code was matched to > 1 COD
-any(sapply(cod_ranked_mod, length) > 1)
+Factorize and reorder.
 
-# Add to `vrd`
-vrd$cod_rankable_mod <- cod_ranked_mod
-
+```{r}
 vrd <- vrd |>
-  relocate(cod_rankable_mod, .after = cod_rankable_cdc)
+  mutate(
+    rcod_cdc = factor(rcod_cdc, levels = names(rcod$cdc)),
+    rcod_mod = factor(rcod_mod, levels = names(rcod$mod)),
+    rcod_cdc_alt = factor(rcod_cdc_alt, levels = rcod$cdc_alt$name2),
+    rcod_mod_alt = factor(rcod_mod_alt, levels = rcod$mod_alt$name2)
+  ) |>
+  relocate(rcod_cdc, rcod_cdc_alt, rcod_mod, rcod_mod_alt, .before = cod)
 ```
 
 # Create color palette
@@ -245,18 +233,18 @@ Assign color palette to rankable CODs.
 pal <- colorRampPalette(paletteer::paletteer_d("yarrr::basel"))
 
 cod_ranked <- vrd |>
-  count(cod_rankable_cdc) |>
-  rename(cod = cod_rankable_cdc) |>
+  count(rcod_cdc) |>
+  rename(cod = rcod_cdc) |>
   bind_rows(
     vrd |>
-      count(cod_rankable_mod) |>
-      rename(cod = cod_rankable_mod)
+      count(rcod_mod) |>
+      rename(cod = rcod_mod)
   )
 
 cod_ranked <- cod_ranked |>
   bind_rows(
     tibble(
-      cod = names(cod_cdc)[!names(cod_cdc) %in% cod_ranked$cod],
+      cod = names(rcod$cdc)[!names(rcod$cdc) %in% cod_ranked$cod],
       n = 0
     )
   ) |>
@@ -277,21 +265,34 @@ sq <- sort(setNames(l, seq_along(l)))
 
 clr <- clr[as.numeric(names(sq))]
 
-cod_colors <- data.frame(
-  cod = cod_ranked,
-  colors = factor(clr, levels = clr)
+rcod_colors <- data.frame(
+  name1 = cod_ranked,
+  color = factor(clr, levels = clr)
 )
+
+rcod_colors <- rcod_colors |>
+  left_join(
+    rcod$cdc_alt |>
+      select(name1, name2),
+    by = "name1"
+  ) |>
+  rows_update(
+    rcod$mod_alt |>
+      select(name1, name2),
+    by = "name1"
+  ) |>
+  select(name1, name2, color)
 ```
 
 Plot assigned colors.
 
 ```{r fig.width=10, fig.height=15}
-cod_colors |>
-  ggplot(aes(x = 1, y = colors, fill = colors)) +
+rcod_colors |>
+  ggplot(aes(x = 1, y = color, fill = color)) +
   geom_bar(stat = "identity") +
   scale_fill_identity() +
   geom_text(
-    aes(label = cod),
+    aes(label = name2),
     position = position_nudge(x = -.5),
     color = "white",
     fontface = "bold"
@@ -302,6 +303,6 @@ cod_colors |>
 
 ```{r}
 saveRDS(vrd, "../data/vrd_db_dataset.rds")
-saveRDS(cod_colors, "../data/cod_colors.rds")
+saveRDS(rcod_colors, "../data/rcod_colors.rds")
 ```
 

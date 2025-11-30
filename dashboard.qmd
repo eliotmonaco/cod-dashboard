@@ -25,7 +25,7 @@ sliderInput(
   inputId = "ranks",
   label = "Ranks",
   min = 10,
-  max = length(cod_cdc),
+  max = length(rcod$cdc),
   value = 10,
   step = 1,
   ticks = FALSE
@@ -50,9 +50,9 @@ sliderInput(
 
 ```{r}
 radioButtons(
-  inputId = "codset",
+  inputId = "rcodset",
   label = "COD definitions",
-  choices = codlist
+  choices = rcodlist
 )
 
 selectInput(
@@ -193,7 +193,7 @@ plotOutput("bump")
 selectInput(
   inputId = "codcat",
   label = "Rankable COD category",
-  choices = sort(names(cod_cdc))
+  choices = sort(rcod$cdc_alt$name2)
 )
 ```
 
@@ -210,10 +210,10 @@ DTOutput("table")
 age <- reactiveVal(0:maxage)
 
 observeEvent(input$agebin, {
-  if (input$agebin != "all") {
-    age(unlist(strsplit(input$agebin, ";")))
-  } else {
+  if (input$agebin == "all") {
     age(0:maxage)
+  } else {
+    age(as.numeric(unlist(strsplit(input$agebin, ";"))))
   }
 })
 
@@ -225,7 +225,7 @@ observeEvent(input$agerng, {
 data <- reactive({
   df <- filter_vrd(
     vrd,
-    cod_set = input$codset,
+    rcod_set = input$rcodset,
     years_input = input$years,
     age_input = age(),
     sex_input = input$sex,
@@ -274,10 +274,10 @@ output$ndr_val <- renderText({
 
 # Toggle COD set (CDC vs modified)
 cod_set_list <- reactive({
-  if (input$codset == "cdc") {
-    cod_cdc
-  } else if (input$codset == "mod") {
-    cod_mod
+  if (input$rcodset == "cdc") {
+    rcod$cdc
+  } else if (input$rcodset == "mod") {
+    rcod$mod
   }
 })
 
@@ -287,6 +287,7 @@ caption <- reactive({
     names = filternames,
     inputs = input,
     filters = datafilters,
+    max_age = maxage,
     ages = age()
   )
 })
@@ -294,7 +295,7 @@ caption <- reactive({
 # Leading COD bump chart
 output$bump <- renderPlot({
   data() |>
-    config_bump_data(colors = cod_colors) |>
+    config_bump_data(colors = clrs) |>
     cod_bump_chart(
       xvals = input$years,
       nranks = input$ranks,
@@ -307,30 +308,30 @@ output$table <- renderDT({
   data() |>
     rankable_cod_summary(
       year = input$years[2],
-      cod_name = input$codcat,
+      rcod_name = input$codcat,
       cod_list = cod_set_list()
     ) |>
     cod_table(
       year = input$years[2],
-      cod_name = input$codcat
+      rcod_name = input$codcat
     )
 })
 
 # Update COD breakdown menu based on COD category selection
 observe({
-  if (input$codset == "cdc") {
+  if (input$rcodset == "cdc") {
     updateSelectInput(
       session,
       inputId = "codcat",
       label = "Rankable COD category",
-      choices = sort(names(cod_cdc))
+      choices = sort(rcod$cdc_alt$name2)
     )
-  } else if (input$codset == "mod") {
+  } else if (input$rcodset == "mod") {
     updateSelectInput(
       session,
       inputId = "codcat",
       label = "Rankable COD category",
-      choices = sort(names(cod_mod))
+      choices = sort(rcod$mod_alt$name2)
     )
   }
 })
