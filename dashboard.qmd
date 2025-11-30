@@ -18,6 +18,19 @@ source("scripts/setup.R")
 
 :::{.sb-filter-group}
 
+## COD filters
+
+```{r}
+radioButtons(
+  inputId = "rcodset",
+  label = "COD definitions",
+  choices = rcodlist
+)
+```
+
+:::
+:::{.sb-filter-group}
+
 ## Plot filters
 
 ```{r}
@@ -49,12 +62,6 @@ sliderInput(
 ## Data filters
 
 ```{r}
-radioButtons(
-  inputId = "rcodset",
-  label = "COD definitions",
-  choices = rcodlist
-)
-
 selectInput(
   inputId = "agebin",
   label = "Age bin",
@@ -133,6 +140,10 @@ actionButton(
 
 :::
 
+# About
+
+Some text.
+
 # Overview
 
 ## Row
@@ -177,7 +188,7 @@ highchartOutput("ann1")
 highchartOutput("ann2")
 ```
 
-# Leading causes
+# Ranked causes
 
 ## Row
 
@@ -185,7 +196,7 @@ highchartOutput("ann2")
 plotOutput("bump")
 ```
 
-# Cause breakdown
+# Detailed causes
 
 ## {.toolbar}
 
@@ -257,7 +268,7 @@ n_rankable_deaths <- reactive({
 })
 
 output$nd_text <- renderText({
-  paste("Total deaths in", yr())
+  paste("Number of deaths in", yr())
 })
 
 output$nd_val <- renderText({
@@ -265,7 +276,7 @@ output$nd_val <- renderText({
 })
 
 output$ndr_text <- renderText({
-  paste("Total rankable deaths in", yr())
+  paste("Number of deaths in rankable COD categories in", yr())
 })
 
 output$ndr_val <- renderText({
@@ -317,7 +328,16 @@ output$table <- renderDT({
     )
 })
 
-# Update COD breakdown menu based on COD category selection
+# Update rank slider max based on COD set
+observe({
+  if (input$rcodset == "cdc") {
+    updateSliderInput(session, inputId = "ranks", max = length(rcod$cdc))
+  } else if (input$rcodset == "mod") {
+    updateSliderInput(session, inputId = "ranks", max = length(rcod$mod))
+  }
+})
+
+# Update COD breakdown menu based on COD set
 observe({
   if (input$rcodset == "cdc") {
     updateSelectInput(

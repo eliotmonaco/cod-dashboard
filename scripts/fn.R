@@ -275,7 +275,7 @@ cod_bump_caption <- function(names, inputs, filters, max_age, ages) {
     ls$agebin <- paste0("Age: ", ages[1], " to ", ages[length(ages)])
   }
 
-  selections <- paste(unlist(ls), collapse = " | ")
+  selections <- paste0(paste(unlist(ls), collapse = " | "), ".")
 
   selections <- paste(
     "**Data filters:**",
@@ -460,7 +460,7 @@ rankable_cod_summary <- function(df, year, rcod_name, cod_list) {
     arrange(desc(n))
 }
 
-# Create COD breakdown table
+# Create detailed COD table
 cod_table <- function(df, year, rcod_name) {
   title <- paste0(rcod_name, ", ", year)
 
