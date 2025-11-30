@@ -189,29 +189,69 @@ filter_vrd <- function(
 
 # Configure filtered dataset for plot display
 config_bump_data <- function(df, colors) {
+  # Get total number of possible ranks
+  maxranks <- length(levels(df$rcod_var))
+
+  # Count the number of deaths for each rankable COD. Keep zero counts.
   df <- df |>
-    group_by(yod, rcod_var) |>
-    summarize(n = n(), .groups = "keep") |>
-    ungroup() |>
+    count(yod, rcod_var, .drop = FALSE) |>
     drop_na(rcod_var)
 
-  maxranks <- 52
-
-  ls <- lapply(unique(df$yod), \(x) {
+  # Rank CODs within each year
+  ls <- lapply(unique(df$yod), \(yr) {
     df |>
-      filter(yod == x) |>
-      mutate(rank = rank(-n, ties.method = "first")) |>
-      mutate(yrank = maxranks - rank) |>
+      filter(yod == yr) |>
+      mutate(
+        rank = rank(-n, ties.method = "first"),
+        # When count == 0, put rank below y-axis
+        rank = if_else(n == 0, maxranks + 1, rank),
+        yrank = maxranks - rank
+      ) |>
       complete(yod) |>
       arrange(rank)
   })
 
+  # Find years that each COD is non-zero. Remove leading and trailing zero
+  # counts, but keep intermediate zero counts for plotting. This will make the
+  # line dip below the y-axis rather than cross years in the visible part of
+  # the plot, which can be confusing.
+  cod_yrs <- lapply(levels(df$rcod_var), \(cod) {
+    yrs <- sapply(ls, \(df2) {
+      df2[df2$rcod_var == cod, "n", drop = TRUE] != 0
+    })
+
+    yrs <- setNames(yrs, unique(df$yod))
+
+    i <- which(yrs)
+
+    if (length(i) != 0) {
+      i <- i[1]:i[length(i)]
+
+      yrs <- yrs[seq_along(yrs)[!seq_along(yrs) %in% i]]
+    }
+
+    yrs <- as.numeric(names(yrs))
+  })
+
+  names(cod_yrs) <- levels(df$rcod_var)
+
+  cod_yrs <- keep(cod_yrs, \(x) length(x) != 0)
+
+  cod_yrs <- imap(cod_yrs, \(x, i) {
+    data.frame(yod = x, rcod_var = i)
+  })
+
+  cod_yrs <- list_rbind(cod_yrs)
+
+  # List to df, join colors
   list_rbind(ls) |>
     left_join(
       colors |>
         select(name2, color),
       by = c("rcod_var" = "name2")
-    )
+    ) |>
+    # Remove leading and trailing years where counts == 0
+    rows_delete(cod_yrs, by = c("yod", "rcod_var"))
 }
 
 # Create bump chart caption
@@ -237,8 +277,8 @@ cod_bump_caption <- function(names, inputs, filters, max_age, ages) {
 
   selections <- paste(unlist(ls), collapse = " | ")
 
-  selections <- paste0(
-    "**Categories selected:** ",
+  selections <- paste(
+    "**Data filters:**",
     selections
   )
 
@@ -416,8 +456,7 @@ rankable_cod_summary <- function(df, year, rcod_name, cod_list) {
       rcod_var == rcod_name,
       yod == year
     ) |>
-    group_by(icd_code, icd_title) |>
-    summarize(n = n(), .groups = "keep") |>
+    count(icd_code, icd_title) |>
     arrange(desc(n))
 }
 
