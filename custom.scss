@@ -1,51 +1,14 @@
-/*-- scss:defaults --*/
-
-$syn-lightblue: #d2dffc;
-
-$bslib-sidebar-bg: $syn-lightblue !default;
-
-
-
-/*-- scss:rules --*/
-
-.sb-filter-group {
-  padding-bottom: 20px;
+// Sidebar panel button
+.btn-default:not(.btn-default:hover) {
+  background-color: #fcfdff;
 }
 
-.sidebar.html-fill-container h2 {
-  font-size: 1rem;
-  margin-top: 0;
-}
-
-.irs.irs--shiny, .shiny-input-select, .action-button, .shiny-options-group {
-  margin: 0 10px;
-}
-
-#codcat.shiny-input-select, #codcat.shiny-input-select + .shiny-input-select {
-  min-width: 20em;
-}
-
-#codcat.shiny-input-select + .shiny-input-select > .selectize-input > .item {
- margin-right: 20px;
-}
-
-#cod.shiny-input-select + .selectize-control.single .selectize-input:not(.no-arrow)::after {
-  right: 10px;
-}
-
-/* .form-group.shiny-input-container > .control-label {
-  font-weight: bold;
-} */
-
-.vb-cod #nd_val, .vb-cod #ndr_val {
-	font-size: clamp(.1em,10cqw,3em);
-}
-
+// Validation error message
 .shiny-output-error {
   display: grid;
   justify-content: center;
 }
 
-#selections.shiny-text-output {
-  font-size: .8em;
-}
+
+
+

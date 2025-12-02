@@ -1,4 +1,3 @@
-
 source("scripts/setup.R")
 
 input <- list(
@@ -6,14 +5,14 @@ input <- list(
   years = c(2014, 2024),
   rcodset = rcodlist[[2]],
   agebin = agelist[[1]],
-  # agerng = 0:25,
-  sex = sexlist[[1]],
-  race = racelist[[1]],
+  agerng = 112:112,
+  sex = sexlist[[2]],
+  race = racelist[[4]],
   hispanic = hispaniclist[[1]],
   education = edlist[[1]],
   pregnancy = preglist[[1]],
   # pregnancy = c(preglist[[3]], preglist[[4]]),
-  district = distlist[[1]]
+  district = distlist[[3]]
 )
 
 if ("agerng" %in% names(input)) {
@@ -28,7 +27,7 @@ if ("agerng" %in% names(input)) {
 vrd_fltr <- filter_vrd(
   vrd,
   rcod_set = input$rcodset,
-  years_input = input$years,
+  years_input = input$years[1]:input$years[2],
   age_input = age,
   # age_input = unlist(strsplit(input$agebin, ";")),
   sex_input = input$sex,
@@ -41,7 +40,11 @@ vrd_fltr <- filter_vrd(
 )
 
 # Leading COD bump chart
-vrd_plot <- config_bump_data(vrd_fltr, colors = clrs)
+vrd_plot <- config_bump_data(
+  vrd_fltr,
+  years = input$years[1]:input$years[2],
+  colors = clrs
+)
 
 cap <- cod_bump_caption(
   names = filternames,

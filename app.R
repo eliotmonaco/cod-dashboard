@@ -1,7 +1,9 @@
 source("scripts/setup.R")
 
 sb <- sidebar(
+  width = 300,
   id = "sb",
+  bg = "#edeff5",
   conditionalPanel(
     condition = "['Ranked causes', 'Detailed causes'].includes(input.nav)",
     radioButtons(
@@ -12,14 +14,6 @@ sb <- sidebar(
     accordion(
       open = FALSE,
       multiple = FALSE,
-      # accordion_panel(
-      #   "COD definitions",
-      #   radioButtons(
-      #     inputId = "rcodset",
-      #     label = "COD definitions",
-      #     choices = rcodlist
-      #   )
-      # ),
       accordion_panel(
         "Plot filters",
         sliderInput(
@@ -49,14 +43,13 @@ sb <- sidebar(
           label = "Age bin",
           choices = agelist
         ),
-        sliderInput(
+        numericRangeInput(
           inputId = "agerng",
           label = "Age range",
+          value = c(0, maxage),
           min = 0,
           max = maxage,
-          value = c(0, maxage),
-          step = 1,
-          ticks = FALSE
+          step = 1
         ),
         selectInput(
           inputId = "sex",
@@ -90,11 +83,11 @@ sb <- sidebar(
           label = "Council district",
           choices = distlist
         )
-      ),
-      actionButton(
-        inputId = "reset",
-        label = "Reset filters"
       )
+    ),
+    actionButton(
+      inputId = "reset",
+      label = "Reset filters"
     )
   )
 )
@@ -104,8 +97,8 @@ about_page <- nav_panel(
   h1("Introduction"),
   p("This application is a product of the ", strong("Kansas City Health Department's Office of Population Health Science", .noWS = "after"), ". It allows users to investigate the underlying causes of death of Kansas City residents using data provided by the Missouri Department of Health and Senior Services Bureau of Vital Records."),
   h1("Cause of death"),
-  p("Each year, the Kansas City Health Department receives all records of the deaths of Kansas City residents from the previous year. Records do not contain personally identifying information, such as a person's name or address, but they do include the cause of death (COD) for each person. Causes of death are indicated by ICD-10 codes and are initially determined by the medical examiner. (Link to more info about ICD codes? Info about how COD is determined?) Records may include multiple causes, but only the underlying cause is used when categorizing leading causes of death."),
-  p("The Centers for Disease Control and Prevention (CDC) provide a list of 52 rankable cause of death categories allowing us to sort and rank the leading causes of death for our citizens. This helps us to compare leading causes of death between different segments of the city and to compare leading causes in Kansas City to those in other jurisdictions, such as Missouri or the United States."),
+  p("Each year, the Kansas City Health Department receives all records of the deaths of Kansas City residents from the previous year. These records do not contain personally identifying information, such as a person's name or address, but they do include the cause of death (COD) for each person. Causes of death are initially determined by the medical examiner and are indicated by ICD-10 codes. (Link to more info about ICD codes? Info about how COD is determined?) Records may include multiple causes, but only the underlying cause is used when categorizing leading causes of death."),
+  p("The Centers for Disease Control and Prevention (CDC) provide a list of 52 rankable cause of death categories which we use to sort and rank the leading causes of death for Kansas City residents. This allows us to compare leading causes of death between different segments of the city or to other jurisdictions, such as Missouri or the United States."),
   h1("Using this app"),
   h2("Navigation"),
   p("The", strong("Overview"), "page shows the number of deaths in Kansas City as both a raw count and as a percentage of the city's population. It also shows the number of deaths that fall into the rankable COD categories."),
@@ -165,6 +158,13 @@ detailed_causes_page <- nav_panel(
 ui <- page_navbar(
   title = "Kansas City Cause of Death Inspector",
   id = "nav",
+  theme = bs_theme(
+    "navbar-bg" = "#3a4c94"
+  ) |>
+    bs_add_rules(sass::sass_file("custom2.scss")) |>
+    bs_add_variables(
+      "accordion-bg" = "#fcfdff"
+    ),
   sidebar = sb,
   about_page,
   overview_page,
@@ -193,27 +193,31 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$agerng, {
-    age(seq(input$agerng[1], input$agerng[2], 1))
-  })
+    if (input$agerng[1] < 0) {
+      updateNumericRangeInput(
+        session, "agerng", value = c(0, input$agerng[2])
+      )
+    }
 
-  # Filter `vrd` dataset
-  data <- reactive({
-    df <- filter_vrd(
-      vrd,
-      rcod_set = input$rcodset,
-      years_input = input$years,
-      age_input = age(),
-      sex_input = input$sex,
-      race_input = input$race,
-      hispanic_input = input$hispanic,
-      education_input = input$education,
-      pregnancy_input = input$pregnancy,
-      district_input = input$district
-    )
+    if (input$agerng[1] > maxage) {
+      updateNumericRangeInput(
+        session, "agerng", value = c(maxage, input$agerng[2])
+      )
+    }
 
-    validate(need(df, "There are no records matching the selection criteria"))
+    if (input$agerng[2] < 0) {
+      updateNumericRangeInput(
+        session, "agerng", value = c(input$agerng[1], 0)
+      )
+    }
 
-    df
+    if (input$agerng[2] > maxage) {
+      updateNumericRangeInput(
+        session, "agerng", value = c(input$agerng[1], maxage)
+      )
+    }
+
+    age(sort(seq(input$agerng[1], input$agerng[2])))
   })
 
   # Value boxes
@@ -256,6 +260,47 @@ server <- function(input, output, session) {
     }
   })
 
+  # Annual deaths plots
+  output$ann1 <- renderHighchart({
+    plot_ann_deaths(
+      annual_deaths |>
+        select(
+          year,
+          "All deaths" = n,
+          "Deaths in rankable COD categories only" = n_rankable
+        ),
+      type = "n"
+    )
+  })
+
+  output$ann2 <- renderHighchart({
+    plot_ann_deaths(
+      annual_deaths |>
+        select(
+          year,
+          "All deaths" = pct,
+          "Deaths in rankable COD categories only" = pct_rankable
+        ),
+      type = "pct"
+    )
+  })
+
+  # Filter `vrd` dataset
+  data <- reactive({
+    df <- filter_vrd(
+      vrd,
+      rcod_set = input$rcodset,
+      years_input = input$years[1]:input$years[2],
+      age_input = age(),
+      sex_input = input$sex,
+      race_input = input$race,
+      hispanic_input = input$hispanic,
+      education_input = input$education,
+      pregnancy_input = input$pregnancy,
+      district_input = input$district
+    )
+  })
+
   # Caption text
   caption <- reactive({
     cod_bump_caption(
@@ -269,8 +314,13 @@ server <- function(input, output, session) {
 
   # Leading COD bump chart
   output$bump <- renderPlot({
+    validate(need(data(), "There are no records matching the selected filters"))
+
     data() |>
-      config_bump_data(colors = clrs) |>
+      config_bump_data(
+        years = input$years[1]:input$years[2],
+        colors = clrs
+      ) |>
       cod_bump_chart(
         xvals = input$years,
         nranks = input$ranks,
@@ -323,38 +373,13 @@ server <- function(input, output, session) {
     updateNumericInput(session, "ranks", value = 10)
     updateNumericInput(session, "years", value = yrsrng)
     updateNumericInput(session, "agebin", value = agelist[[1]])
-    updateNumericInput(session, "agerng", value = c(0, maxage))
+    updateNumericRangeInput(session, "agerng", value = c(0, maxage))
     updateNumericInput(session, "sex", value = sexlist[[1]])
     updateNumericInput(session, "race", value = racelist[[1]])
     updateNumericInput(session, "hispanic", value = hispaniclist[[1]])
     updateNumericInput(session, "education", value = edlist[[1]])
     updateNumericInput(session, "pregnancy", value = preglist[[1]])
     updateNumericInput(session, "district", value = distlist[[1]])
-  })
-
-  # Annual deaths plots
-  output$ann1 <- renderHighchart({
-    plot_ann_deaths(
-      annual_deaths |>
-        select(
-          year,
-          "All deaths" = n,
-          "Deaths in rankable COD categories only" = n_rankable
-        ),
-      type = "n"
-    )
-  })
-
-  output$ann2 <- renderHighchart({
-    plot_ann_deaths(
-      annual_deaths |>
-        select(
-          year,
-          "All deaths" = pct,
-          "Deaths in rankable COD categories only" = pct_rankable
-        ),
-      type = "pct"
-    )
   })
 }
 

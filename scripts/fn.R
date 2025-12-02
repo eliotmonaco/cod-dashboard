@@ -129,10 +129,7 @@ filter_vrd <- function(
   rcod_set <- match.arg(rcod_set)
 
   df <- df |>
-    filter(
-      yod >= years_input[1],
-      yod <= years_input[2]
-    )
+    filter(yod %in% years_input)
 
   df <- df |>
     filter(age %in% age_input)
@@ -188,7 +185,7 @@ filter_vrd <- function(
 }
 
 # Configure filtered dataset for plot display
-config_bump_data <- function(df, colors) {
+config_bump_data <- function(df, years, colors) {
   # Get total number of possible ranks
   maxranks <- length(levels(df$rcod_var))
 
@@ -198,17 +195,29 @@ config_bump_data <- function(df, colors) {
     drop_na(rcod_var)
 
   # Rank CODs within each year
-  ls <- lapply(unique(df$yod), \(yr) {
+  ls <- lapply(years, \(yr) {
     df |>
       filter(yod == yr) |>
+      mutate(rank = rank(-n, ties.method = "first")) |>
+      complete(rcod_var, fill = list(yod = yr, n = 0)) |>
+      arrange(rank) |>
+      relocate(yod)
+  })
+
+  # Find the highest number of ranks used for CODs with non-zero counts
+  nranks <- ls |>
+    list_rbind() |>
+    filter(n != 0) |>
+    pull(rank) |>
+    max(na.rm = TRUE)
+
+  ls <- lapply(ls, \(df) {
+    df |>
       mutate(
-        rank = rank(-n, ties.method = "first"),
         # When count == 0, put rank below y-axis
-        rank = if_else(n == 0, maxranks + 1, rank),
+        rank = if_else(n == 0, nranks + 1, rank),
         yrank = maxranks - rank
-      ) |>
-      complete(yod) |>
-      arrange(rank)
+      )
   })
 
   # Find years that each COD is non-zero. Remove leading and trailing zero
@@ -220,7 +229,7 @@ config_bump_data <- function(df, colors) {
       df2[df2$rcod_var == cod, "n", drop = TRUE] != 0
     })
 
-    yrs <- setNames(yrs, unique(df$yod))
+    yrs <- setNames(yrs, years)
 
     i <- which(yrs)
 
@@ -244,13 +253,14 @@ config_bump_data <- function(df, colors) {
   cod_yrs <- list_rbind(cod_yrs)
 
   # List to df, join colors
-  list_rbind(ls) |>
+  ls |>
+    list_rbind() |>
     left_join(
       colors |>
         select(name2, color),
       by = c("rcod_var" = "name2")
     ) |>
-    # Remove leading and trailing years where counts == 0
+    # Remove leading and trailing years where count == 0
     rows_delete(cod_yrs, by = c("yod", "rcod_var"))
 }
 
@@ -307,7 +317,7 @@ cod_bump_chart <- function(df, xvals, nranks, caption) {
 
   # y-axis scale
   yseq <- df |>
-    filter(rank %in% 1:nranks) |>
+    filter(rank %in% 1:nranks, n != 0) |>
     distinct(rank, .keep_all = TRUE) |>
     select(rank, yrank)
 

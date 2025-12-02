@@ -1,4 +1,5 @@
 library(shiny)
+library(shinyWidgets)
 library(bslib)
 library(bsicons)
 library(tidyverse)
@@ -33,7 +34,7 @@ yrsrng <- c(
 
 ## Age
 
-maxage <- max(vrd$age, na.rm = TRUE)
+maxage <- max(vrd[!is.na(vrd$rcod_cdc), "age", drop = TRUE], na.rm = TRUE)
 
 ngroups <- ceiling(maxage / 5)
 
