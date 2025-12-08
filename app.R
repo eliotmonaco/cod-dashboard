@@ -1,101 +1,98 @@
 source("scripts/setup.R")
 
 sb <- sidebar(
-  width = 300,
-  id = "sb",
+  id = "sb-cod",
+  position = "left",
   bg = "#edeff5",
-  conditionalPanel(
-    condition = "['Ranked causes', 'Detailed causes'].includes(input.nav)",
-    radioButtons(
-      inputId = "rcodset",
-      label = "COD definitions",
-      choices = rcodlist
-    ),
-    accordion(
-      open = FALSE,
-      multiple = FALSE,
-      accordion_panel(
-        "Plot filters",
-        sliderInput(
-          inputId = "ranks",
-          label = "Ranks",
-          min = 10,
-          max = length(rcod$cdc),
-          value = 10,
-          step = 1,
-          ticks = FALSE
-        ),
-        sliderInput(
-          inputId = "years",
-          label = "Years",
-          min = yrsrng[1],
-          max = yrsrng[2],
-          value = yrsrng,
-          step = 1,
-          sep = "",
-          ticks = FALSE
-        )
+  radioButtons(
+    inputId = "rcodset",
+    label = "COD definitions",
+    choices = rcodlist
+  ),
+  accordion(
+    open = FALSE,
+    multiple = FALSE,
+    accordion_panel(
+      "Plot filters",
+      sliderInput(
+        inputId = "ranks",
+        label = "Ranks",
+        min = 10,
+        max = length(rcod$cdc),
+        value = 10,
+        step = 1,
+        ticks = FALSE
       ),
-      accordion_panel(
-        "Data filters",
-        selectInput(
-          inputId = "agebin",
-          label = "Age bin",
-          choices = agelist
-        ),
-        numericRangeInput(
-          inputId = "agerng",
-          label = "Age range",
-          value = c(0, maxage),
-          min = 0,
-          max = maxage,
-          step = 1
-        ),
-        selectInput(
-          inputId = "sex",
-          label = "Sex",
-          choices = sexlist
-        ),
-        selectInput(
-          inputId = "race",
-          label = "Race",
-          choices = racelist
-        ),
-        selectInput(
-          inputId = "hispanic",
-          label = "Hispanic origin",
-          choices = hispaniclist
-        ),
-        selectInput(
-          inputId = "education",
-          label = "Education level",
-          choices = edlist
-        ),
-        selectInput(
-          inputId = "pregnancy",
-          label = "Pregnancy status",
-          choices = preglist,
-          selected = preglist[[1]],
-          multiple = TRUE
-        ),
-        selectInput(
-          inputId = "district",
-          label = "Council district",
-          choices = distlist
-        )
+      sliderInput(
+        inputId = "years",
+        label = "Years",
+        min = yrsrng[1],
+        max = yrsrng[2],
+        value = yrsrng,
+        step = 1,
+        sep = "",
+        ticks = FALSE
       )
     ),
-    actionButton(
-      inputId = "reset",
-      label = "Reset filters"
+    accordion_panel(
+      "Data filters",
+      selectInput(
+        inputId = "agebin",
+        label = "Age bin",
+        choices = agelist
+      ),
+      numericRangeInput(
+        inputId = "agerng",
+        label = "Age range",
+        value = c(0, maxage),
+        min = 0,
+        max = maxage,
+        step = 1
+      ),
+      selectInput(
+        inputId = "sex",
+        label = "Sex",
+        choices = sexlist
+      ),
+      selectInput(
+        inputId = "race",
+        label = "Race",
+        choices = racelist
+      ),
+      selectInput(
+        inputId = "hispanic",
+        label = "Hispanic origin",
+        choices = hispaniclist
+      ),
+      selectInput(
+        inputId = "education",
+        label = "Education level",
+        choices = edlist
+      ),
+      selectInput(
+        inputId = "pregnancy",
+        label = "Pregnancy status",
+        choices = preglist,
+        selected = preglist[[1]],
+        multiple = TRUE
+      ),
+      selectInput(
+        inputId = "district",
+        label = "Council district",
+        choices = distlist
+      )
     )
+  ),
+  actionButton(
+    inputId = "reset",
+    label = "Reset filters"
   )
 )
 
 about_page <- nav_panel(
   "About",
   h1("Introduction"),
-  p("This application is a product of the ", strong("Kansas City Health Department's Office of Population Health Science", .noWS = "after"), ". It allows users to investigate the underlying causes of death of Kansas City residents using data provided by the Missouri Department of Health and Senior Services Bureau of Vital Records."),
+  p("This application is a product of the ", strong("Kansas City Health Department's Office of Population Health Science", .noWS = "after"), ". It allows users to explore the underlying causes of death of Kansas City residents using data provided by the Missouri Department of Health and Senior Services Bureau of Vital Records."),
   h1("Cause of death"),
   p("Each year, the Kansas City Health Department receives all records of the deaths of Kansas City residents from the previous year. These records do not contain personally identifying information, such as a person's name or address, but they do include the cause of death (COD) for each person. Causes of death are initially determined by the medical examiner and are indicated by ICD-10 codes. (Link to more info about ICD codes? Info about how COD is determined?) Records may include multiple causes, but only the underlying cause is used when categorizing leading causes of death."),
   p("The Centers for Disease Control and Prevention (CDC) provide a list of 52 rankable cause of death categories which we use to sort and rank the leading causes of death for Kansas City residents. This allows us to compare leading causes of death between different segments of the city or to other jurisdictions, such as Missouri or the United States."),
@@ -161,26 +158,31 @@ ui <- page_navbar(
   theme = bs_theme(
     "navbar-bg" = "#3a4c94"
   ) |>
-    bs_add_rules(sass::sass_file("custom2.scss")) |>
+    bs_add_rules(sass::sass_file("custom.scss")) |>
     bs_add_variables(
       "accordion-bg" = "#fcfdff"
     ),
-  sidebar = sb,
   about_page,
   overview_page,
-  ranked_causes_page,
-  detailed_causes_page
+  nav_panel(
+    "Mortality",
+    layout_sidebar(
+      sidebar = sb,
+      navset_tab(
+        ranked_causes_page,
+        detailed_causes_page
+      ),
+      tags$script(HTML( # JS to make `navset_tab()` elements fillable
+        "
+        $('div.tabbable').addClass('html-fill-container html-fill-item');
+        $('div.tab-content').addClass('html-fill-container html-fill-item');
+        "
+      ))
+    )
+  )
 )
 
 server <- function(input, output, session) {
-  # Sidebar open/closed
-  observe({
-    toggle_sidebar(
-      id = "sb",
-      open = input$nav %in% c("Ranked causes", "Detailed causes")
-    )
-  })
-
   # Set `age()` value based on which age input is changed
   age <- reactiveVal(0:maxage)
 
